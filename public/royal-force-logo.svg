@@ -1,0 +1,8 @@
+<svg width="160" height="160" viewBox="0 0 160 160" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="title desc">
+  <title id="title">Royal Force Security Services</title>
+  <desc id="desc">Royal Force branded shield mark</desc>
+  <rect width="160" height="160" rx="28" fill="#071B46"/>
+  <path d="M80 22L124 38V72C124 103.5 105.8 128 80 139C54.2 128 36 103.5 36 72V38L80 22Z" fill="#0F2F6F" stroke="#C99A2E" stroke-width="6"/>
+  <path d="M57 104V55H82C94.7 55 102 61.8 102 72.2C102 79.1 98.5 84.4 92.3 87.1L104 104H91.4L81.2 89H68V104H57ZM68 79.4H81.2C87.3 79.4 90.8 76.8 90.8 72.3C90.8 67.7 87.3 65.2 81.2 65.2H68V79.4Z" fill="white"/>
+  <path d="M59 120H101" stroke="#C99A2E" stroke-width="7" stroke-linecap="round"/>
+</svg>
