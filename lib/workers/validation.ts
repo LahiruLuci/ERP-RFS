@@ -2,10 +2,12 @@ import {
   emergencyContactRelationships,
   workerGenders,
   workerStatuses,
+  workerTypes,
   type EmergencyContactRelationship,
   type WorkerGender,
   type WorkerSaveInput,
   type WorkerStatus,
+  type WorkerType,
 } from "./types";
 
 export type WorkerFormState = {
@@ -35,6 +37,10 @@ function readMoney(formData: FormData, field: string) {
 
 function isWorkerStatus(value: string): value is WorkerStatus {
   return workerStatuses.includes(value as WorkerStatus);
+}
+
+function isWorkerType(value: string): value is WorkerType {
+  return workerTypes.includes(value as WorkerType);
 }
 
 function isWorkerGender(value: string): value is WorkerGender {
@@ -78,6 +84,8 @@ export function validateWorkerForm(
     } {
   const employeeNo = readRequiredString(formData, "employee_no");
   const fullName = readRequiredString(formData, "full_name");
+  const workerTypeValue = readRequiredString(formData, "worker_type") || "permanent";
+  const workerType = isWorkerType(workerTypeValue) ? workerTypeValue : null;
   const basicSalary = readMoney(formData, "basic_salary");
   const defaultShiftRate = readMoney(formData, "default_shift_rate");
   const statusValue = readRequiredString(formData, "status");
@@ -112,6 +120,10 @@ export function validateWorkerForm(
 
   if (!fullName) {
     fieldErrors.full_name = "Full Name is required.";
+  }
+
+  if (!workerType) {
+    fieldErrors.worker_type = "Choose a valid worker type.";
   }
 
   if (!Number.isFinite(basicSalary) || basicSalary < 0) {
@@ -174,13 +186,14 @@ export function validateWorkerForm(
     };
   }
 
-  if (!status) {
+  if (!status || !workerType) {
     return {
       ok: false,
       state: {
-        error: "Choose a valid worker status.",
+        error: "Choose valid worker details.",
         fieldErrors: {
-          status: "Choose a valid worker status.",
+          ...(status ? {} : { status: "Choose a valid worker status." }),
+          ...(workerType ? {} : { worker_type: "Choose a valid worker type." }),
         },
       },
     };
@@ -190,6 +203,7 @@ export function validateWorkerForm(
     ok: true,
     data: {
       employee_no: employeeNo,
+      worker_type: workerType,
       full_name: fullName,
       nic: readOptionalString(formData, "nic"),
       date_of_birth: dateOfBirth,

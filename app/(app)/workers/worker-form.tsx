@@ -10,6 +10,8 @@ import {
   workerStatusLabels,
   workerGenders,
   workerStatuses,
+  workerTypeLabels,
+  workerTypes,
   type Worker,
   type WorkerStatus,
 } from "@/lib/workers/types";
@@ -245,6 +247,25 @@ export function WorkerForm({ action, cancelHref, worker }: WorkerFormProps) {
       </FormSection>
 
       <FormSection title="Employment Information">
+        <label className="flex flex-col gap-2">
+          <span className="text-sm font-semibold text-[var(--text-primary)]">
+            Worker Type
+          </span>
+          <select
+            className="field-control h-11 rounded-md px-3 text-sm transition"
+            defaultValue={worker?.worker_type ?? "permanent"}
+            disabled={isPending}
+            name="worker_type"
+          >
+            {workerTypes.map((workerType) => (
+              <option key={workerType} value={workerType}>
+                {workerTypeLabels[workerType]}
+              </option>
+            ))}
+          </select>
+          <FieldError message={state.fieldErrors?.worker_type} />
+        </label>
+
         <label className="flex flex-col gap-2">
           <span className="text-sm font-semibold text-[var(--text-primary)]">
             Employee No *

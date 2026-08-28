@@ -7,6 +7,8 @@ import type {
   WorkerSaveInput,
   WorkerStatus,
   WorkerStatusHistory,
+  WorkerType,
+  TemporaryWorkerInput,
 } from "./types";
 
 export type WorkerFilters = {
@@ -16,6 +18,7 @@ export type WorkerFilters = {
   shiftRateMax?: number | null;
   shiftRateMin?: number | null;
   status?: WorkerStatus | null;
+  workerType?: WorkerType | null;
 };
 
 export class WorkerDatabaseSetupError extends Error {
@@ -36,6 +39,13 @@ export class WorkerAuthenticationError extends Error {
   constructor() {
     super("Current user is not authenticated.");
     this.name = "WorkerAuthenticationError";
+  }
+}
+
+export class WorkerConnectionError extends Error {
+  constructor() {
+    super("Unable to connect to Supabase.");
+    this.name = "WorkerConnectionError";
   }
 }
 
@@ -74,6 +84,13 @@ export class WorkerDuplicateEpfNoError extends Error {
   }
 }
 
+export class WorkerDuplicateIdentityError extends Error {
+  constructor() {
+    super("A worker with this identity already exists.");
+    this.name = "WorkerDuplicateIdentityError";
+  }
+}
+
 export class WorkerConstraintError extends Error {
   constructor() {
     super("Worker data violates a database constraint.");
@@ -84,6 +101,7 @@ export class WorkerConstraintError extends Error {
 const workerSelect = `
   id,
   employee_no,
+  worker_type,
   full_name,
   nic,
   date_of_birth,
@@ -124,6 +142,17 @@ function sanitizeSearchTerm(search: string) {
   return search.replace(/[%,()]/g, " ").trim();
 }
 
+function isConnectionError(error: { details?: string; message?: string }) {
+  const text = `${error.message ?? ""} ${error.details ?? ""}`.toLowerCase();
+
+  return (
+    text.includes("fetch failed") ||
+    text.includes("enotfound") ||
+    text.includes("econnrefused") ||
+    text.includes("networkerror")
+  );
+}
+
 function isMissingWorkerDatabaseSetup(error: { code?: string; message?: string }) {
   return (
     error.code === "42703" ||
@@ -132,6 +161,9 @@ function isMissingWorkerDatabaseSetup(error: { code?: string; message?: string }
     error.code === "PGRST205" ||
     error.message?.includes("save_worker") ||
     error.message?.includes("worker_status_history") ||
+    error.message?.includes("worker_type") ||
+    error.message?.includes("create_temporary_worker") ||
+    error.message?.includes("set_worker_type") ||
     error.message?.includes("date_of_birth")
   );
 }
@@ -197,6 +229,10 @@ function handleWorkerDataError(
 ): never {
   logWorkerDataError(operation, error);
 
+  if (isConnectionError(error)) {
+    throw new WorkerConnectionError();
+  }
+
   if (isMissingWorkerDatabaseSetup(error)) {
     throw new WorkerDatabaseSetupError();
   }
@@ -230,6 +266,10 @@ function handleWorkerDataError(
 
     if (errorText.includes("epf_no")) {
       throw new WorkerDuplicateEpfNoError();
+    }
+
+    if (errorText.includes("identity")) {
+      throw new WorkerDuplicateIdentityError();
     }
 
     throw new WorkerConstraintError();
@@ -326,6 +366,10 @@ export async function getWorkers(filters: WorkerFilters | string = "") {
     query = query.eq("status", normalizedFilters.status);
   }
 
+  if (normalizedFilters.workerType) {
+    query = query.eq("worker_type", normalizedFilters.workerType);
+  }
+
   const { data, error } = await query;
 
   if (error) {
@@ -409,6 +453,70 @@ function toSaveWorkerParams(input: WorkerSaveInput, workerId: string | null) {
   };
 }
 
+async function updateWorkerType(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  workerId: string,
+  workerType: WorkerType,
+) {
+  const { error } = await supabase.rpc("set_worker_type", {
+    p_worker_id: workerId,
+    p_worker_type: workerType,
+  });
+
+  if (error) {
+    handleWorkerDataError(error, "Unable to update worker type.", "set_worker_type");
+  }
+}
+
+function validateTemporaryWorkerInput(
+  input: TemporaryWorkerInput,
+): TemporaryWorkerInput {
+  const fullName = input.full_name.trim();
+  const nic = input.nic.trim();
+  const phone = input.phone.trim();
+
+  if (!fullName || !nic || !phone) {
+    throw new WorkerConstraintError();
+  }
+
+  if (!Number.isFinite(input.default_shift_rate) || input.default_shift_rate < 0) {
+    throw new WorkerConstraintError();
+  }
+
+  return {
+    address: input.address?.trim() || null,
+    default_shift_rate: input.default_shift_rate,
+    full_name: fullName,
+    nic,
+    notes: input.notes?.trim() || null,
+    phone,
+  };
+}
+
+export async function createTemporaryWorker(input: TemporaryWorkerInput) {
+  const supabase = await createClient();
+  const validated = validateTemporaryWorkerInput(input);
+
+  const { data, error } = await supabase.rpc("create_temporary_worker", {
+    p_address: validated.address,
+    p_default_shift_rate: validated.default_shift_rate,
+    p_full_name: validated.full_name,
+    p_nic: validated.nic,
+    p_notes: validated.notes,
+    p_phone: validated.phone,
+  });
+
+  if (error) {
+    handleWorkerDataError(
+      error,
+      "Unable to create temporary worker.",
+      "create_temporary_worker",
+    );
+  }
+
+  return data as string;
+}
+
 export async function createWorker(input: WorkerSaveInput) {
   const supabase = await createClient();
 
@@ -421,6 +529,10 @@ export async function createWorker(input: WorkerSaveInput) {
 
   if (error) {
     handleWorkerDataError(error, "Unable to save worker.", "save_worker.insert");
+  }
+
+  if (input.worker_type !== "permanent") {
+    await updateWorkerType(supabase, data as string, input.worker_type);
   }
 
   return data as string;
@@ -439,4 +551,6 @@ export async function updateWorker(id: string, input: WorkerSaveInput) {
   if (error) {
     handleWorkerDataError(error, "Unable to update worker.", "save_worker.update");
   }
+
+  await updateWorkerType(supabase, id, input.worker_type);
 }

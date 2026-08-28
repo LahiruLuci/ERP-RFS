@@ -1,4 +1,9 @@
-import { workerStatusLabels, type WorkerStatus } from "@/lib/workers/types";
+import {
+  workerStatusLabels,
+  workerTypeLabels,
+  type WorkerStatus,
+  type WorkerType,
+} from "@/lib/workers/types";
 
 const statusClassNames = {
   active:
@@ -32,6 +37,25 @@ export function WorkerStatusBadge({ status }: { status: WorkerStatus }) {
         className={`size-1.5 rounded-full ${dotClassNames[status]}`}
       />
       {workerStatusLabels[status]}
+    </span>
+  );
+}
+
+export function formatWorkerType(type: WorkerType | null | undefined) {
+  return type ? workerTypeLabels[type] : "-";
+}
+
+export function WorkerTypeBadge({ type }: { type: WorkerType }) {
+  const className =
+    type === "temporary"
+      ? "border-blue-200 bg-blue-50 text-blue-700"
+      : "border-slate-200 bg-slate-50 text-slate-700";
+
+  return (
+    <span
+      className={`inline-flex items-center rounded-full border px-2.5 py-1 text-xs font-bold ${className}`}
+    >
+      {workerTypeLabels[type]}
     </span>
   );
 }

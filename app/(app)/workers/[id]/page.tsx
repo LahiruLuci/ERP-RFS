@@ -2,12 +2,18 @@ import type { ReactNode } from "react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
+import {
+  DeductionDatabaseSetupError,
+  getWorkerMonthlyDeductionSummary,
+} from "@/lib/deductions/data";
 import { formatLkr } from "@/lib/format/currency";
 import { getWorker, getWorkerStatusHistory } from "@/lib/workers/data";
 
 import {
+  formatWorkerType,
   formatWorkerStatus,
   WorkerStatusBadge,
+  WorkerTypeBadge,
 } from "../worker-status-badge";
 
 type WorkerDetailsPageProps = {
@@ -73,6 +79,28 @@ export default async function WorkerDetailsPage({
   }
 
   const statusHistory = await getWorkerStatusHistory(worker.id);
+  const now = new Date();
+  const currentMonth = now.getMonth() + 1;
+  const currentYear = now.getFullYear();
+  let deductionSummary = {
+    advance: 0,
+    meals: 0,
+    other: 0,
+    total: 0,
+    uniform: 0,
+  };
+
+  try {
+    deductionSummary = await getWorkerMonthlyDeductionSummary({
+      month: currentMonth,
+      workerId: worker.id,
+      year: currentYear,
+    });
+  } catch (error) {
+    if (!(error instanceof DeductionDatabaseSetupError)) {
+      throw error;
+    }
+  }
 
   return (
     <div className="mx-auto flex max-w-5xl flex-col gap-6">
@@ -89,7 +117,8 @@ export default async function WorkerDetailsPage({
           </p>
         </div>
 
-        <div className="flex flex-col gap-3 sm:flex-row">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+          <WorkerTypeBadge type={worker.worker_type} />
           <Link
             className="app-focus btn-secondary flex min-h-11 items-center justify-center rounded-md px-4 text-sm font-bold transition"
             href="/workers"
@@ -100,7 +129,9 @@ export default async function WorkerDetailsPage({
             className="app-focus btn-primary flex min-h-11 items-center justify-center rounded-md px-4 text-sm font-bold transition"
             href={`/workers/${worker.id}/edit`}
           >
-            Edit Worker
+            {worker.worker_type === "temporary"
+              ? "Complete Worker Registration"
+              : "Edit Worker"}
           </Link>
         </div>
       </section>
@@ -129,6 +160,7 @@ export default async function WorkerDetailsPage({
 
       <DetailSection title="Employment Information">
         <DetailItem label="Employee No" value={worker.employee_no} />
+        <DetailItem label="Worker Type" value={formatWorkerType(worker.worker_type)} />
         <DetailItem label="ETF No" value={worker.etf_no} />
         <DetailItem label="EPF No" value={worker.epf_no} />
         <DetailItem
@@ -157,6 +189,34 @@ export default async function WorkerDetailsPage({
         />
       </DetailSection>
 
+      <section className="app-surface rounded-lg p-5 sm:p-6">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+          <div>
+            <h2 className="text-lg font-bold text-[var(--text-primary)]">
+              Advances & Deductions
+            </h2>
+            <p className="mt-2 text-sm leading-6 text-[var(--text-secondary)]">
+              Current month summary for payroll deductions.
+            </p>
+          </div>
+          <Link
+            className="app-focus btn-secondary flex min-h-10 items-center justify-center rounded-md px-4 text-sm font-bold transition"
+            href={`/advances-deductions?workerId=${worker.id}&year=${currentYear}&month=${currentMonth}`}
+          >
+            View History
+          </Link>
+        </div>
+        <dl className="mt-5 grid gap-4 sm:grid-cols-2">
+          <DetailItem
+            label="Current Month Advance"
+            value={formatLkr(deductionSummary.advance)}
+          />
+          <DetailItem
+            label="Current Month Total Deductions"
+            value={formatLkr(deductionSummary.total)}
+          />
+        </dl>
+      </section>
       <section className="app-surface rounded-lg p-5 sm:p-6">
         <h2 className="text-lg font-bold text-[var(--text-primary)]">
           Employment Status History
@@ -214,3 +274,4 @@ export default async function WorkerDetailsPage({
     </div>
   );
 }
+

@@ -6,6 +6,7 @@ export const workerStatuses = [
 ] as const;
 
 export const workerGenders = ["Male", "Female", "Other"] as const;
+export const workerTypes = ["permanent", "temporary"] as const;
 
 export const emergencyContactRelationships = [
   "Spouse",
@@ -19,6 +20,7 @@ export const emergencyContactRelationships = [
 
 export type WorkerStatus = (typeof workerStatuses)[number];
 export type WorkerGender = (typeof workerGenders)[number];
+export type WorkerType = (typeof workerTypes)[number];
 export type EmergencyContactRelationship =
   (typeof emergencyContactRelationships)[number];
 
@@ -29,9 +31,15 @@ export const workerStatusLabels = {
   terminated: "Terminated",
 } as const satisfies Record<WorkerStatus, string>;
 
+export const workerTypeLabels = {
+  permanent: "Permanent",
+  temporary: "Temporary",
+} as const satisfies Record<WorkerType, string>;
+
 export type Worker = {
   id: string;
   employee_no: string;
+  worker_type: WorkerType;
   full_name: string;
   nic: string | null;
   date_of_birth: string | null;
@@ -57,6 +65,7 @@ export type Worker = {
 
 export type WorkerInput = {
   employee_no: string;
+  worker_type: WorkerType;
   full_name: string;
   nic: string | null;
   date_of_birth: string | null;
@@ -76,6 +85,15 @@ export type WorkerInput = {
   default_shift_rate: number;
   status: WorkerStatus;
   notes: string | null;
+};
+
+export type TemporaryWorkerInput = {
+  address: string | null;
+  default_shift_rate: number;
+  full_name: string;
+  nic: string;
+  notes: string | null;
+  phone: string;
 };
 
 export type WorkerSaveInput = WorkerInput & {

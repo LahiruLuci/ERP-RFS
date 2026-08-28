@@ -45,7 +45,7 @@ const navigationSections: NavigationSection[] = [
       {
         label: "Clients",
         href: "/clients",
-        status: "coming-soon",
+        status: "active",
       },
       {
         label: "Workplaces",
@@ -65,12 +65,12 @@ const navigationSections: NavigationSection[] = [
       {
         label: "Payroll",
         href: "/payroll",
-        status: "coming-soon",
+        status: "active",
       },
       {
         label: "Advances & Deductions",
         href: "/advances-deductions",
-        status: "coming-soon",
+        status: "active",
       },
     ],
   },

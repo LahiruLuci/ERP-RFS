@@ -9,11 +9,14 @@ import {
 import {
   workerStatusLabels,
   workerStatuses,
+  workerTypeLabels,
+  workerTypes,
   type Worker,
   type WorkerStatus,
+  type WorkerType,
 } from "@/lib/workers/types";
 
-import { WorkerStatusBadge } from "./worker-status-badge";
+import { WorkerStatusBadge, WorkerTypeBadge } from "./worker-status-badge";
 
 type WorkersPageProps = {
   searchParams?: Promise<{
@@ -23,6 +26,7 @@ type WorkersPageProps = {
     rateMax?: string;
     rateMin?: string;
     status?: string;
+    type?: string;
   }>;
 };
 
@@ -32,10 +36,15 @@ type FilterState = {
   rateMax: string;
   rateMin: string;
   status: WorkerStatus | "";
+  workerType: WorkerType | "";
 };
 
 function isWorkerStatus(value: string): value is WorkerStatus {
   return workerStatuses.includes(value as WorkerStatus);
+}
+
+function isWorkerType(value: string): value is WorkerType {
+  return workerTypes.includes(value as WorkerType);
 }
 
 function readFilterNumber(value: string) {
@@ -78,6 +87,7 @@ function getFilterState(
   searchParams: Awaited<WorkersPageProps["searchParams"]>,
 ) {
   const statusValue = searchParams?.status?.trim() ?? "";
+  const workerTypeValue = searchParams?.type?.trim() ?? "";
 
   return {
     basicMax: searchParams?.basicMax?.trim() ?? "",
@@ -85,6 +95,8 @@ function getFilterState(
     rateMax: searchParams?.rateMax?.trim() ?? "",
     rateMin: searchParams?.rateMin?.trim() ?? "",
     status: statusValue && isWorkerStatus(statusValue) ? statusValue : "",
+    workerType:
+      workerTypeValue && isWorkerType(workerTypeValue) ? workerTypeValue : "",
   } satisfies FilterState;
 }
 
@@ -118,6 +130,7 @@ function buildWorkerFilters(search: string, filterState: FilterState) {
       shiftRateMax,
       shiftRateMin,
       status: filterState.status || null,
+      workerType: filterState.workerType || null,
     } satisfies WorkerFilters,
   };
 }
@@ -155,6 +168,10 @@ function getClearSearchHref(filterState: FilterState) {
     params.set("status", filterState.status);
   }
 
+  if (filterState.workerType) {
+    params.set("type", filterState.workerType);
+  }
+
   const queryString = params.toString();
 
   return queryString ? `/workers?${queryString}` : "/workers";
@@ -186,6 +203,10 @@ function getActiveFilterChips(filterState: FilterState) {
     chips.push(`Status: ${workerStatusLabels[filterState.status]}`);
   }
 
+  if (filterState.workerType) {
+    chips.push(`Type: ${workerTypeLabels[filterState.workerType]}`);
+  }
+
   return chips;
 }
 
@@ -202,7 +223,7 @@ function EmptyState({
       ? "No workers found"
       : "No workers yet";
   const description = hasFilters
-    ? "Try adjusting the salary range, shift rate, or status."
+      ? "Try adjusting the salary range, shift rate, worker type, or status."
     : hasSearch
       ? "Try a different name, employee number, NIC, ETF number, or phone."
       : "Add your first worker to start building the workforce records.";
@@ -318,7 +339,7 @@ export default async function WorkersPage({ searchParams }: WorkersPageProps) {
             </div>
           </div>
 
-          <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-[1fr_1fr_16rem]">
+          <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-[1fr_1fr_14rem_14rem]">
             <fieldset className="rounded-md border border-[var(--border)] px-3 pb-3 pt-2">
               <legend className="px-1 text-xs font-bold uppercase tracking-wide text-[var(--brand-primary)]">
                 Basic Salary (LKR)
@@ -393,6 +414,24 @@ export default async function WorkersPage({ searchParams }: WorkersPageProps) {
 
             <label className="flex flex-col gap-1.5 rounded-md border border-[var(--border)] px-3 pb-3 pt-2">
               <span className="text-xs font-bold uppercase tracking-wide text-[var(--brand-primary)]">
+                Worker Type
+              </span>
+              <select
+                className="field-control min-h-9 rounded-md px-3 text-sm transition"
+                defaultValue={filterState.workerType}
+                name="type"
+              >
+                <option value="">All Types</option>
+                {workerTypes.map((workerType) => (
+                  <option key={workerType} value={workerType}>
+                    {workerTypeLabels[workerType]}
+                  </option>
+                ))}
+              </select>
+            </label>
+
+            <label className="flex flex-col gap-1.5 rounded-md border border-[var(--border)] px-3 pb-3 pt-2">
+              <span className="text-xs font-bold uppercase tracking-wide text-[var(--brand-primary)]">
                 Worker Status
               </span>
               <select
@@ -447,6 +486,7 @@ export default async function WorkersPage({ searchParams }: WorkersPageProps) {
                     <th className="px-4 py-3">NIC</th>
                     <th className="px-4 py-3">ETF No</th>
                     <th className="px-4 py-3">Phone</th>
+                    <th className="px-4 py-3">Type</th>
                     <th className="px-4 py-3 text-right">Basic Salary</th>
                     <th className="px-4 py-3 text-right">Shift Rate</th>
                     <th className="px-4 py-3">Status</th>
@@ -470,6 +510,9 @@ export default async function WorkersPage({ searchParams }: WorkersPageProps) {
                       </td>
                       <td className="whitespace-nowrap px-4 py-4 text-[var(--text-secondary)]">
                         {worker.phone || "-"}
+                      </td>
+                      <td className="whitespace-nowrap px-4 py-4">
+                        <WorkerTypeBadge type={worker.worker_type} />
                       </td>
                       <td className="whitespace-nowrap px-4 py-4 text-right font-medium tabular-nums text-[var(--text-primary)]">
                         {formatLkr(worker.basic_salary)}
@@ -519,6 +562,9 @@ export default async function WorkersPage({ searchParams }: WorkersPageProps) {
                     </h2>
                   </div>
                   <WorkerStatusBadge status={worker.status} />
+                </div>
+                <div className="mt-3">
+                  <WorkerTypeBadge type={worker.worker_type} />
                 </div>
 
                 <dl className="mt-4 grid gap-3 text-sm sm:grid-cols-2">
