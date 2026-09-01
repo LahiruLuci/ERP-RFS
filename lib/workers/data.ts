@@ -485,11 +485,13 @@ function validateTemporaryWorkerInput(
 
   return {
     address: input.address?.trim() || null,
+    client_operation_id: input.client_operation_id?.trim() || null,
     default_shift_rate: input.default_shift_rate,
     full_name: fullName,
     nic,
     notes: input.notes?.trim() || null,
     phone,
+    worker_id: input.worker_id?.trim() || null,
   };
 }
 
@@ -504,6 +506,8 @@ export async function createTemporaryWorker(input: TemporaryWorkerInput) {
     p_nic: validated.nic,
     p_notes: validated.notes,
     p_phone: validated.phone,
+    p_worker_id: validated.worker_id,
+    p_client_operation_id: validated.client_operation_id,
   });
 
   if (error) {

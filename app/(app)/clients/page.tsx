@@ -1,13 +1,16 @@
 import Link from "next/link";
 
 import {
+  ClientConnectionError,
   ClientDatabaseSetupError,
   getClients,
 } from "@/lib/clients/data";
+import { OfflineCacheHydrator } from "@/lib/offline/cache-hydrator";
 import { clientStatusLabels, type ClientStatus } from "@/lib/clients/types";
 
 import { createClientAction } from "./actions";
 import { AddClientForm } from "./client-forms";
+import { CachedClientsView } from "./cached-clients-view";
 
 type ClientsPageProps = {
   searchParams?: Promise<{ q?: string }>;
@@ -56,6 +59,10 @@ export default async function ClientsPage({ searchParams }: ClientsPageProps) {
   try {
     clients = await getClients(search);
   } catch (error) {
+    if (error instanceof ClientConnectionError) {
+      return <CachedClientsView search={search} />;
+    }
+
     if (error instanceof ClientDatabaseSetupError) {
       return <ClientSetupMessage />;
     }
@@ -65,6 +72,7 @@ export default async function ClientsPage({ searchParams }: ClientsPageProps) {
 
   return (
     <div className="flex flex-col gap-5">
+      {!search ? <OfflineCacheHydrator clients={clients} /> : null}
       <section className="app-surface overflow-hidden rounded-lg">
         <div className="flex flex-col gap-4 border-l-4 border-[var(--brand-accent)] p-4 sm:p-5 lg:flex-row lg:items-center lg:justify-between">
           <div>

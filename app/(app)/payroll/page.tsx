@@ -16,6 +16,7 @@ import { workerStatusLabels } from "@/lib/workers/types";
 import { WorkerStatusBadge } from "../workers/worker-status-badge";
 
 import { approvePayrollRunAction } from "./actions";
+import { ApprovalForm } from "./approval-form";
 
 type PayrollPageProps = {
   searchParams?: Promise<{
@@ -188,14 +189,7 @@ export default async function PayrollPage({ searchParams }: PayrollPageProps) {
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
             <PayrollStatusBadge status={runStatus} />
             {data?.run && data.canApprove && !isApproved ? (
-              <form action={approveAction}>
-                <button
-                  className="app-focus btn-primary flex min-h-10 w-full items-center justify-center rounded-md px-4 text-sm font-bold transition"
-                  type="submit"
-                >
-                  Approve Payroll
-                </button>
-              </form>
+              <ApprovalForm action={approveAction} month={month} year={year} />
             ) : null}
           </div>
         </div>

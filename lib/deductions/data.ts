@@ -30,6 +30,7 @@ const deductionSelect = `
 const workerSelect = `
   id,
   employee_no,
+  worker_type,
   full_name,
   nic,
   etf_no,
@@ -234,6 +235,8 @@ export async function searchDeductionWorkers(search: string) {
   let query = supabase
     .from("workers")
     .select(workerSelect)
+    .eq("status", "active")
+    .eq("worker_type", "permanent")
     .order("employee_no", { ascending: true })
     .limit(25);
 
@@ -265,6 +268,7 @@ export async function searchDeductionWorkers(search: string) {
     | "nic"
     | "phone"
     | "status"
+    | "worker_type"
   >[];
 }
 
@@ -289,6 +293,8 @@ export async function getWorkerDeductionPeriodData({
     .from("workers")
     .select(workerSelect)
     .eq("id", workerId)
+    .eq("status", "active")
+    .eq("worker_type", "permanent")
     .maybeSingle();
 
   if (workerError) {

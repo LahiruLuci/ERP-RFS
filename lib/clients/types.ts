@@ -89,6 +89,7 @@ export type WorkpointPayrollSummary = {
 };
 
 export type WorkpointPayrollSaveInput = {
+  client_operation_id?: string | null;
   entry_id: string | null;
   month: number;
   shift_rate: number;

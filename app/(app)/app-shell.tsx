@@ -5,11 +5,16 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState, type ReactNode } from "react";
 
+import {
+  ConnectionStatusIndicator,
+  OnlineStatusProvider,
+} from "@/lib/connection/online-status";
 import { createClient } from "@/lib/supabase/client";
 
 type AppShellProps = {
   children: ReactNode;
   userEmail?: string;
+  userId?: string;
 };
 
 type NavigationItem = {
@@ -208,6 +213,12 @@ function LogoutButton({
   async function handleLogout() {
     setIsSigningOut(true);
 
+    if ("serviceWorker" in navigator) {
+      navigator.serviceWorker.controller?.postMessage({
+        type: "CLEAR_AUTH_ROUTE_CACHE",
+      });
+    }
+
     const supabase = createClient();
     await supabase.auth.signOut();
 
@@ -253,12 +264,13 @@ function UserSummary({
   );
 }
 
-export function AppShell({ children, userEmail }: AppShellProps) {
+export function AppShell({ children, userEmail, userId }: AppShellProps) {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const pathname = usePathname();
   const currentPageTitle = getCurrentPageTitle(pathname);
 
   return (
+    <OnlineStatusProvider userId={userId}>
     <div className="app-bg min-h-dvh overflow-x-hidden text-[var(--text-primary)]">
       <aside className="fixed inset-y-0 left-0 z-30 hidden w-72 border-r border-white/10 bg-[var(--brand-primary)] lg:flex lg:flex-col">
         <div className="border-b border-white/10 px-5 py-5">
@@ -336,6 +348,10 @@ export function AppShell({ children, userEmail }: AppShellProps) {
               </div>
             </div>
 
+            <div className="flex shrink-0 items-center gap-2 sm:gap-3">
+              <ConnectionStatusIndicator />
+            </div>
+
             <div className="hidden min-w-0 max-w-[min(32rem,48vw)] items-center justify-end gap-3 sm:flex">
               <div className="min-w-0 rounded-full bg-[var(--brand-primary)] px-2.5 py-2">
                 <UserSummary
@@ -356,6 +372,7 @@ export function AppShell({ children, userEmail }: AppShellProps) {
         </main>
       </div>
     </div>
+    </OnlineStatusProvider>
   );
 }
 

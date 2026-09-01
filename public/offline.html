@@ -1,0 +1,165 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#071b46" />
+    <title>Royal Force Security Services</title>
+    <style>
+      :root {
+        --background: #f4f7fb;
+        --brand-primary: #071b46;
+        --brand-primary-soft: #0f2f6f;
+        --brand-accent: #c99a2e;
+        --border: #dbe4f0;
+        --text-primary: #0b162f;
+        --text-secondary: #526174;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        min-height: 100vh;
+        margin: 0;
+        background:
+          radial-gradient(circle at top left, rgb(15 47 111 / 0.08), transparent 28rem),
+          var(--background);
+        color: var(--text-primary);
+        font-family: Arial, Helvetica, sans-serif;
+      }
+
+      main {
+        display: flex;
+        min-height: 100vh;
+        align-items: center;
+        justify-content: center;
+        padding: 24px;
+      }
+
+      section {
+        width: min(100%, 560px);
+        border: 1px solid var(--border);
+        border-left: 4px solid var(--brand-accent);
+        border-radius: 8px;
+        background: white;
+        padding: 28px;
+        box-shadow: 0 8px 24px rgb(7 27 70 / 0.05);
+      }
+
+      .brand {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+      }
+
+      img {
+        width: 56px;
+        height: 56px;
+        object-fit: contain;
+      }
+
+      .name {
+        margin: 0;
+        color: var(--brand-primary);
+        font-size: 20px;
+        font-weight: 800;
+        line-height: 1.1;
+      }
+
+      .kicker {
+        margin: 4px 0 0;
+        color: var(--brand-accent);
+        font-size: 12px;
+        font-weight: 800;
+        letter-spacing: 0.16em;
+        text-transform: uppercase;
+      }
+
+      h1 {
+        margin: 28px 0 0;
+        color: var(--text-primary);
+        font-size: clamp(28px, 6vw, 40px);
+        line-height: 1.05;
+      }
+
+      p {
+        margin: 16px 0 0;
+        color: var(--text-secondary);
+        font-size: 16px;
+        line-height: 1.65;
+      }
+
+      .status {
+        display: inline-flex;
+        min-height: 36px;
+        align-items: center;
+        gap: 8px;
+        margin-top: 24px;
+        border: 1px solid #fed7aa;
+        border-radius: 999px;
+        background: #fff7ed;
+        padding: 0 14px;
+        color: #9a3412;
+        font-size: 13px;
+        font-weight: 800;
+      }
+
+      .dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 999px;
+        background: #f59e0b;
+      }
+
+      a {
+        display: inline-flex;
+        min-height: 40px;
+        align-items: center;
+        justify-content: center;
+        margin-top: 24px;
+        border-radius: 6px;
+        background: var(--brand-primary);
+        padding: 0 16px;
+        color: white;
+        font-size: 14px;
+        font-weight: 800;
+        text-decoration: none;
+      }
+
+      a:focus-visible {
+        outline: 4px solid rgb(201 154 46 / 0.28);
+        outline-offset: 2px;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <section aria-labelledby="offline-title">
+        <div class="brand">
+          <img src="/royal-force-logo.png" alt="Royal Force Security Services" />
+          <div>
+            <p class="name">Royal Force</p>
+            <p class="kicker">Security Services</p>
+          </div>
+        </div>
+        <h1 id="offline-title">You're offline.</h1>
+        <p>
+          The application shell is available on this device. Previously cached
+          information may still be available after the app opens.
+        </p>
+        <p>
+          If this is the first time using this device, connect to the internet
+          once to load and prepare the application.
+        </p>
+        <div class="status" role="status">
+          <span class="dot" aria-hidden="true"></span>
+          Offline
+        </div>
+        <br />
+        <a href="/dashboard">Try opening dashboard</a>
+      </section>
+    </main>
+  </body>
+</html>

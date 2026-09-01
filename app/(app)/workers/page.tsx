@@ -1,8 +1,10 @@
 import Link from "next/link";
 
 import { formatLkr } from "@/lib/format/currency";
+import { OfflineCacheHydrator } from "@/lib/offline/cache-hydrator";
 import {
   getWorkers,
+  WorkerConnectionError,
   WorkerDatabaseSetupError,
   type WorkerFilters,
 } from "@/lib/workers/data";
@@ -17,6 +19,7 @@ import {
 } from "@/lib/workers/types";
 
 import { WorkerStatusBadge, WorkerTypeBadge } from "./worker-status-badge";
+import { CachedWorkersView } from "./cached-workers-view";
 
 type WorkersPageProps = {
   searchParams?: Promise<{
@@ -268,6 +271,10 @@ export default async function WorkersPage({ searchParams }: WorkersPageProps) {
     try {
       workers = await getWorkers(filters);
     } catch (error) {
+      if (error instanceof WorkerConnectionError) {
+        return <CachedWorkersView search={search} />;
+      }
+
       loadError =
         error instanceof WorkerDatabaseSetupError
           ? "Worker database setup is not complete. Run the worker profile status-history SQL migration in Supabase, then refresh this page."
@@ -277,6 +284,9 @@ export default async function WorkersPage({ searchParams }: WorkersPageProps) {
 
   return (
     <div className="flex flex-col gap-4">
+      {!loadError && !search && !hasFilters ? (
+        <OfflineCacheHydrator workers={workers} />
+      ) : null}
       <section className="app-surface overflow-hidden rounded-lg">
         <div className="flex flex-col gap-3 border-l-4 border-[var(--brand-accent)] p-4 sm:p-5 lg:flex-row lg:items-center lg:justify-between">
           <div>

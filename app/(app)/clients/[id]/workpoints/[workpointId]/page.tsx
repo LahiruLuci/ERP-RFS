@@ -2,14 +2,23 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { formatLkr } from "@/lib/format/currency";
-import { getWorkpointPayrollWorkspace } from "@/lib/clients/data";
+import {
+  ClientConnectionError,
+  getWorkpointPayrollWorkspace,
+} from "@/lib/clients/data";
+import { OfflineCacheHydrator } from "@/lib/offline/cache-hydrator";
 import { workerStatusLabels } from "@/lib/workers/types";
 
 import {
   createTemporaryWorkerAction,
   saveWorkpointPayrollEntryAction,
 } from "../../../actions";
-import { InlineWorkpointEntryForm, WorkpointEntryForm } from "../../../client-forms";
+import {
+  InlineWorkpointEntryForm,
+  PendingWorkpointEntries,
+  WorkpointEntryForm,
+} from "../../../client-forms";
+import { CachedWorkpointPayrollView } from "../../../cached-workpoint-payroll-view";
 import {
   WorkerStatusBadge,
   WorkerTypeBadge,
@@ -45,24 +54,62 @@ export default async function WorkpointPayrollPage({ params, searchParams }: Wor
   const safeMonth = month >= 1 && month <= 12 ? month : now.getMonth() + 1;
   const search = resolvedSearchParams?.q?.trim() ?? "";
   const selectedWorkerId = resolvedSearchParams?.selectedWorkerId?.trim() ?? "";
-  const data = await getWorkpointPayrollWorkspace({
-    clientId: id,
-    month: safeMonth,
-    search,
-    workpointId,
-    year: safeYear,
-  });
+  const action = saveWorkpointPayrollEntryAction.bind(null, id, workpointId, safeYear, safeMonth);
+  const temporaryWorkerAction = createTemporaryWorkerAction.bind(null, id, workpointId, safeYear, safeMonth);
+  let data: Awaited<ReturnType<typeof getWorkpointPayrollWorkspace>> | null = null;
+
+  try {
+    data = await getWorkpointPayrollWorkspace({
+      clientId: id,
+      month: safeMonth,
+      search,
+      workpointId,
+      year: safeYear,
+    });
+  } catch (error) {
+    if (error instanceof ClientConnectionError) {
+      return (
+        <CachedWorkpointPayrollView
+          action={action}
+          clientId={id}
+          month={safeMonth}
+          search={search}
+          temporaryWorkerAction={temporaryWorkerAction}
+          workpointId={workpointId}
+          year={safeYear}
+        />
+      );
+    }
+
+    throw error;
+  }
 
   if (!data) {
     notFound();
   }
 
-  const action = saveWorkpointPayrollEntryAction.bind(null, id, workpointId, safeYear, safeMonth);
-  const temporaryWorkerAction = createTemporaryWorkerAction.bind(null, id, workpointId, safeYear, safeMonth);
   const defaultRate = Number(data.workpoint.default_day_rate ?? 0) > 0 ? data.workpoint.default_day_rate : 0;
 
   return (
     <div className="flex flex-col gap-5">
+      <OfflineCacheHydrator
+        clients={[{ ...data.client, workpointCount: 1 }]}
+        payrollWorkspace={{
+          clientId: data.client.id,
+          clientName: data.client.name,
+          entries: data.entries,
+          month: safeMonth,
+          periodEnd: data.period.periodEnd,
+          periodStart: data.period.periodStart,
+          workers: data.eligibleWorkers,
+          workpointId: data.workpoint.id,
+          workpointDefaultDayRate: data.workpoint.default_day_rate,
+          workpointName: data.workpoint.name,
+          year: safeYear,
+        }}
+        workpoints={[data.workpoint]}
+        workpointsClientId={data.client.id}
+      />
       <section className="app-surface overflow-hidden rounded-lg">
         <div className="flex flex-col gap-4 border-l-4 border-[var(--brand-accent)] p-4 sm:p-5 lg:flex-row lg:items-center lg:justify-between">
           <div className="min-w-0">
@@ -111,10 +158,21 @@ export default async function WorkpointPayrollPage({ params, searchParams }: Wor
 
       <WorkpointEntryForm
         action={action}
+        clientId={id}
         defaultRate={defaultRate}
+        month={safeMonth}
         selectedWorkerId={selectedWorkerId}
         temporaryWorkerAction={temporaryWorkerAction}
         workers={data.eligibleWorkers}
+        workpointId={workpointId}
+        year={safeYear}
+      />
+
+      <PendingWorkpointEntries
+        clientId={id}
+        month={safeMonth}
+        workpointId={workpointId}
+        year={safeYear}
       />
 
       {data.entries.length === 0 ? (

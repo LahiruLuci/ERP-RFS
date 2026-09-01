@@ -89,11 +89,13 @@ export type WorkerInput = {
 
 export type TemporaryWorkerInput = {
   address: string | null;
+  client_operation_id?: string | null;
   default_shift_rate: number;
   full_name: string;
   nic: string;
   notes: string | null;
   phone: string;
+  worker_id?: string | null;
 };
 
 export type WorkerSaveInput = WorkerInput & {

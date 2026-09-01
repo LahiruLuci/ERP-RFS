@@ -1,10 +1,16 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
-import { ClientDatabaseSetupError, getClientDetail } from "@/lib/clients/data";
+import {
+  ClientConnectionError,
+  ClientDatabaseSetupError,
+  getClientDetail,
+} from "@/lib/clients/data";
 import { formatLkr } from "@/lib/format/currency";
+import { OfflineCacheHydrator } from "@/lib/offline/cache-hydrator";
 
 import { createWorkpointAction } from "../actions";
+import { CachedClientDetailView } from "../cached-clients-view";
 import { AddWorkpointForm } from "../client-forms";
 
 type ClientDetailPageProps = {
@@ -55,6 +61,16 @@ export default async function ClientDetailPage({
   try {
     data = await getClientDetail(id);
   } catch (error) {
+    if (error instanceof ClientConnectionError) {
+      return (
+        <CachedClientDetailView
+          clientId={id}
+          month={safeMonth}
+          year={safeYear}
+        />
+      );
+    }
+
     if (error instanceof ClientDatabaseSetupError) {
       return <ClientSetupMessage />;
     }
@@ -70,6 +86,11 @@ export default async function ClientDetailPage({
 
   return (
     <div className="flex flex-col gap-5">
+      <OfflineCacheHydrator
+        clients={[{ ...data.client, workpointCount: data.workpoints.length }]}
+        workpoints={data.workpoints}
+        workpointsClientId={data.client.id}
+      />
       <section className="app-surface overflow-hidden rounded-lg">
         <div className="flex flex-col gap-4 border-l-4 border-[var(--brand-accent)] p-4 sm:p-5 lg:flex-row lg:items-center lg:justify-between">
           <div className="min-w-0">

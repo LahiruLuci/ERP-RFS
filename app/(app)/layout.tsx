@@ -27,5 +27,9 @@ export default async function ProtectedLayout({
     redirect("/login");
   }
 
-  return <AppShell userEmail={data.claims.email}>{children}</AppShell>;
+  return (
+    <AppShell userEmail={data.claims.email} userId={data.claims.sub}>
+      {children}
+    </AppShell>
+  );
 }

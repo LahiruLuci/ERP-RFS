@@ -59,6 +59,13 @@ export class ClientAuthenticationError extends Error {
   }
 }
 
+export class ClientConnectionError extends Error {
+  constructor() {
+    super("Unable to connect to Supabase.");
+    this.name = "ClientConnectionError";
+  }
+}
+
 export class ClientPermissionError extends Error {
   constructor() {
     super("Current user is not allowed to manage clients.");
@@ -133,11 +140,26 @@ function logClientError(
   });
 }
 
+function isConnectionError(error: { details?: string; message?: string }) {
+  const text = `${error.message ?? ""} ${error.details ?? ""}`.toLowerCase();
+
+  return (
+    text.includes("fetch failed") ||
+    text.includes("enotfound") ||
+    text.includes("econnrefused") ||
+    text.includes("networkerror")
+  );
+}
+
 function handleClientError(
   operation: string,
   error: { code?: string; details?: string; hint?: string; message?: string },
 ): never {
   logClientError(operation, error);
+
+  if (isConnectionError(error)) {
+    throw new ClientConnectionError();
+  }
 
   if (
     error.code === "42P01" ||
@@ -184,6 +206,10 @@ async function getCurrentAccess(
 
   if (userError) {
     logClientError("auth.getUser", userError);
+    if (isConnectionError(userError)) {
+      throw new ClientConnectionError();
+    }
+
     throw new ClientAuthenticationError();
   }
 
@@ -534,6 +560,7 @@ export async function saveWorkpointPayrollEntry(input: WorkpointPayrollSaveInput
   }
 
   const { data, error } = await supabase.rpc("save_workpoint_payroll_entry", {
+    p_client_operation_id: input.client_operation_id ?? null,
     p_entry_id: input.entry_id,
     p_month: input.month,
     p_shift_rate: input.shift_rate,
