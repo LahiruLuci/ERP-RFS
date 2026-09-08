@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, type FormEvent } from "react";
+import Link from "next/link";
 
 import { useOnlineStatus } from "@/lib/connection/online-status";
 import { hasPendingPayrollMutations } from "@/lib/offline/work-entry-outbox";
@@ -24,15 +25,18 @@ export function ApprovalForm({ action, month, year }: ApprovalFormProps) {
       return;
     }
 
-    const hasPendingChanges = await hasPendingPayrollMutations({
+    const pendingCount = await hasPendingPayrollMutations({
       month,
       userId,
       year,
     });
 
-    if (hasPendingChanges) {
+    if (pendingCount > 0) {
       event.preventDefault();
-      setMessage("Sync all pending changes before approving this payroll.");
+      setMessage(
+        `${pendingCount} offline change${pendingCount === 1 ? "" : "s"
+        } still need to be synchronized or resolved before payroll can be approved from this device.`
+      );
     }
   }
 
@@ -45,9 +49,18 @@ export function ApprovalForm({ action, month, year }: ApprovalFormProps) {
         Approve Payroll
       </button>
       {message ? (
-        <p className="max-w-xs text-xs font-semibold text-amber-700" role="alert">
-          {message}
-        </p>
+        message.includes("offline change") ? (
+          <p className="max-w-xs text-xs font-semibold text-amber-700" role="alert">
+            {message}{" "}
+            <Link href="/offline-sync" className="underline hover:text-amber-800">
+              Open Sync Center
+            </Link>
+          </p>
+        ) : (
+          <p className="max-w-xs text-xs font-semibold text-amber-700" role="alert">
+            {message}
+          </p>
+        )
       ) : null}
     </form>
   );

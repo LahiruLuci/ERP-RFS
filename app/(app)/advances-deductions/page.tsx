@@ -18,7 +18,9 @@ import { formatLkr } from "@/lib/format/currency";
 import { workerStatusLabels, type WorkerStatus } from "@/lib/workers/types";
 
 import { cancelDeductionAction, saveDeductionAction } from "./actions";
+import { DeductionTotals } from "./deduction-totals";
 import { DeductionForm } from "./deduction-form";
+import { PendingDeductions } from "./pending-deductions";
 
 type AdvancesPageProps = {
   searchParams?: Promise<{
@@ -155,7 +157,7 @@ export default async function AdvancesDeductionsPage({
       : "";
   const status =
     resolvedSearchParams?.status &&
-    isDeductionStatus(resolvedSearchParams.status)
+      isDeductionStatus(resolvedSearchParams.status)
       ? resolvedSearchParams.status
       : "";
   const editId = resolvedSearchParams?.edit?.trim() ?? "";
@@ -394,37 +396,28 @@ export default async function AdvancesDeductionsPage({
             </div>
           </section>
 
-          <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
-            {[
-              ["Advances", periodData.summary.advance],
-              ["Meals", periodData.summary.meals],
-              ["Uniform", periodData.summary.uniform],
-              ["Other", periodData.summary.other],
-              ["Total Deductions", periodData.summary.total],
-            ].map(([label, value]) => (
-              <div className="app-surface rounded-lg p-4" key={label}>
-                <p className="text-xs font-bold uppercase tracking-wide text-[var(--brand-primary)]">
-                  {label}
-                </p>
-                <p className="mt-2 text-xl font-black tabular-nums text-[var(--text-primary)]">
-                  {formatLkr(value)}
-                </p>
-              </div>
-            ))}
-          </section>
+          <DeductionTotals
+            month={month}
+            serverSummary={periodData.summary}
+            workerId={selectedWorker.id}
+            year={year}
+          />
 
           {!periodData.isPayrollApproved ? (
-            <DeductionForm
-              action={saveDeductionAction}
-              defaultDate={getDefaultTransactionDate(year, month)}
-              editTransaction={editTransaction}
-              month={month}
-              worker={selectedWorker}
-              year={year}
-            />
+            <>
+              <DeductionForm
+                action={saveDeductionAction}
+                defaultDate={getDefaultTransactionDate(year, month)}
+                editTransaction={editTransaction}
+                month={month}
+                worker={selectedWorker}
+                year={year}
+              />
+              <PendingDeductions month={month} year={year} workerId={selectedWorker.id} />
+            </>
           ) : null}
 
-          <section className="app-surface overflow-hidden rounded-lg">
+          <section className="app-surface overflow-hidden rounded-lg mt-4">
             <div className="border-b border-[var(--border)] p-5">
               <h2 className="text-lg font-bold text-[var(--text-primary)]">
                 Transaction History

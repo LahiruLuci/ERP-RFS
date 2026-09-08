@@ -50,6 +50,7 @@ export type WorkerDeductionSummary = {
 
 export type WorkerDeductionSaveInput = {
   amount: number;
+  client_operation_id?: string | null;
   id?: string | null;
   note: string | null;
   transaction_date: string;

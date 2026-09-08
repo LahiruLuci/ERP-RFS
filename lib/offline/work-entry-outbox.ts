@@ -8,9 +8,11 @@ import {
   getOfflineRecords,
   putOfflineRecord,
 } from "./database";
+import type { WorkerDeductionType } from "@/lib/deductions/types";
 import type {
   CachedPayrollWorkEntry,
   CachedWorker,
+  CachedWorkerDeduction,
   OfflineDeductionPayload,
   OfflineTemporaryWorkerPayload,
   OfflineWorkEntryPayload,
@@ -164,19 +166,88 @@ export async function hasPendingPayrollMutations(input: {
   year: number;
 }) {
   if (!input.userId) {
-    return false;
+    return 0;
   }
 
   const mutations = await getOfflineRecords<PendingMutation>("pendingMutations");
 
-  return mutations.some(
+  const matchingMutations = mutations.filter(
     (mutation) =>
       mutation.user_id === input.userId &&
       "year" in mutation.payload &&
       mutation.payload.year === input.year &&
       mutation.payload.month === input.month &&
-      mutation.status !== "failed",
+      (mutation.entity_type === "payroll_work_entry" || mutation.entity_type === "worker_deduction")
   );
+
+  return matchingMutations.length;
+}
+
+export async function retryPendingMutation(operationId: string, userId: string) {
+  const mutations = await getOfflineRecords<PendingMutation>("pendingMutations");
+  const mutation = mutations.find(
+    (item) => item.operation_id === operationId && item.user_id === userId
+  );
+
+  if (!mutation || mutation.status !== "failed") {
+    return;
+  }
+
+  await putOfflineRecord("pendingMutations", {
+    ...mutation,
+    status: "pending",
+    last_error: null,
+    updated_at: nowIso(),
+  });
+
+  if (mutation.entity_type === "temporary_worker") {
+    await updateCachedWorkerStatus(operationId, "pending");
+  } else if (mutation.entity_type === "worker_deduction") {
+    await updateCachedDeductionStatus(operationId, "pending");
+  } else if (mutation.entity_type === "payroll_work_entry") {
+    await updateCachedEntryStatus(operationId, "pending");
+  }
+
+  emitQueueChanged();
+}
+
+export async function discardPendingMutation(operationId: string, userId: string) {
+  const mutations = await getOfflineRecords<PendingMutation>("pendingMutations");
+  const mutation = mutations.find(
+    (item) => item.operation_id === operationId && item.user_id === userId
+  );
+
+  if (!mutation) return;
+
+  const dependents = mutations.filter(item => item.depends_on_operation_id === operationId);
+  if (dependents.length > 0) {
+    throw new Error("Cannot discard because other offline changes depend on this one.");
+  }
+
+  await deleteOfflineRecord("pendingMutations", mutation.id);
+
+  if (mutation.entity_type === "temporary_worker") {
+    await deleteOfflineRecord("workers", mutation.entity_id ?? "");
+  } else if (mutation.entity_type === "worker_deduction") {
+    const deductions = await getOfflineRecords<any>("workerDeductions");
+    const item = deductions.find(d => d.operation_id === operationId);
+    if (item && item.deduction_id) {
+      await deleteOfflineRecord("workerDeductions", item.deduction_id);
+    } else {
+      await deleteOfflineRecord("workerDeductions", `local-${operationId}`);
+    }
+  } else if (mutation.entity_type === "payroll_work_entry") {
+    const entries = await getOfflineRecords<any>("payrollWorkEntries");
+    const item = entries.find(e => e.operation_id === operationId);
+    // Work entries might use `id` or `entry_id` - we fallback to `local-${operationId}`
+    if (item && item.id) {
+      await deleteOfflineRecord("payrollWorkEntries", item.id);
+    } else {
+      await deleteOfflineRecord("payrollWorkEntries", `local-${operationId}`);
+    }
+  }
+
+  emitQueueChanged();
 }
 
 export async function queueOfflineTemporaryWorker(input: {
@@ -387,6 +458,115 @@ export async function cancelPendingTemporaryWorker(
   emitQueueChanged();
 }
 
+export async function queueOfflineWorkerDeduction(input: {
+  amount: number;
+  month: number;
+  note: string | null;
+  transactionDate: string;
+  type: WorkerDeductionType;
+  userId: string;
+  worker: CachedWorker;
+  workerId: string;
+  year: number;
+}) {
+  const operationId = crypto.randomUUID();
+  const payload: OfflineDeductionPayload = {
+    amount: toSafeNumber(input.amount),
+    client_operation_id: operationId,
+    month: input.month,
+    note: input.note?.trim() || null,
+    transaction_date: input.transactionDate,
+    type: input.type,
+    worker_id: input.workerId,
+    year: input.year,
+  };
+
+  if (!payload.worker_id) {
+    throw new Error("Choose a worker.");
+  }
+
+  if (!payload.type) {
+    throw new Error("Choose a valid transaction type.");
+  }
+
+  if (!Number.isFinite(payload.amount) || payload.amount <= 0) {
+    throw new Error("Amount must be greater than zero.");
+  }
+
+  if (!payload.transaction_date) {
+    throw new Error("Transaction date is required.");
+  }
+
+  if (payload.type === "other" && !payload.note) {
+    throw new Error("Please add a note explaining the other deduction.");
+  }
+
+  const createdAt = nowIso();
+  const mutation: PendingMutation = {
+    created_at: createdAt,
+    depends_on_operation_id: input.worker.operation_id ?? null,
+    entity_id: null,
+    entity_type: "worker_deduction",
+    id: operationId,
+    last_error: null,
+    operation_id: operationId,
+    operation_type: "create",
+    payload,
+    retry_count: 0,
+    status: "pending",
+    updated_at: createdAt,
+    user_id: input.userId,
+  };
+
+  const deduction: CachedWorkerDeduction = {
+    amount: payload.amount,
+    cancellation_reason: null,
+    cancelled_at: null,
+    created_at: createdAt,
+    created_by: input.userId,
+    created_by_name: null,
+    deduction_id: `local-${operationId}`,
+    local_only: true,
+    month: payload.month,
+    note: payload.note,
+    operation_id: operationId,
+    payroll_record_id: null,
+    status: "active",
+    sync_status: "pending",
+    transaction_date: payload.transaction_date,
+    type: payload.type,
+    user_id: input.userId,
+    worker_id: payload.worker_id,
+    year: payload.year,
+  };
+
+  await putOfflineRecord("pendingMutations", mutation);
+  await putOfflineRecord("workerDeductions", deduction);
+  emitQueueChanged();
+
+  return deduction;
+}
+
+export async function cancelPendingWorkerDeduction(operationId: string, userId?: string | null) {
+  if (!userId) {
+    return;
+  }
+
+  const mutations = await getOfflineRecords<PendingMutation>("pendingMutations");
+  const mutation = mutations.find(
+    (item) => item.operation_id === operationId && item.user_id === userId,
+  );
+
+  if (!mutation || mutation.status === "syncing") {
+    return;
+  }
+
+  await deleteOfflineRecord("pendingMutations", mutation.id);
+  await deleteOfflineRecord("workerDeductions", `local-${operationId}`);
+  emitQueueChanged();
+}
+
+
 async function updateMutation(mutation: PendingMutation) {
   await putOfflineRecord("pendingMutations", {
     ...mutation,
@@ -405,6 +585,22 @@ async function updateCachedEntryStatus(
   if (entry) {
     await putOfflineRecord("payrollWorkEntries", {
       ...entry,
+      sync_status: status,
+    });
+  }
+}
+
+async function updateCachedDeductionStatus(
+  operationId: string,
+  status: CachedWorkerDeduction["sync_status"],
+) {
+  const deductions =
+    await getOfflineRecords<CachedWorkerDeduction>("workerDeductions");
+  const deduction = deductions.find((item) => item.operation_id === operationId);
+
+  if (deduction) {
+    await putOfflineRecord("workerDeductions", {
+      ...deduction,
       sync_status: status,
     });
   }
@@ -531,6 +727,8 @@ async function syncTemporaryWorkerMutation(mutation: PendingMutation) {
         await getOfflineRecords<PendingMutation>("pendingMutations");
       const dependentEntries =
         await getOfflineRecords<CachedPayrollWorkEntry>("payrollWorkEntries");
+      const dependentDeductions =
+        await getOfflineRecords<CachedWorkerDeduction>("workerDeductions");
 
       if (worker) {
         await putOfflineRecord("workers", {
@@ -608,6 +806,23 @@ async function syncTemporaryWorkerMutation(mutation: PendingMutation) {
         }
       }
 
+      for (const deduction of dependentDeductions) {
+        if (
+          deduction.operation_id &&
+          dependentMutations.some(
+            (dependentMutation) =>
+              dependentMutation.operation_id === deduction.operation_id &&
+              dependentMutation.depends_on_operation_id === mutation.operation_id,
+          )
+        ) {
+          await putOfflineRecord("workerDeductions", {
+            ...deduction,
+            worker_id: workerId,
+            sync_status: deduction.sync_status === "failed" ? "pending" : deduction.sync_status,
+          });
+        }
+      }
+
       await deleteOfflineRecord("pendingMutations", mutation.id);
       emitQueueChanged();
       return "synced";
@@ -637,9 +852,118 @@ async function syncTemporaryWorkerMutation(mutation: PendingMutation) {
   return "failed";
 }
 
+async function syncWorkerDeductionMutation(mutation: PendingMutation) {
+  if (mutation.entity_type !== "worker_deduction") {
+    return "failed";
+  }
+
+  if (mutation.depends_on_operation_id) {
+    const mutations = await getOfflineRecords<PendingMutation>("pendingMutations");
+    const dependency = mutations.find(
+      (item) => item.operation_id === mutation.depends_on_operation_id,
+    );
+
+    if (dependency?.status === "failed") {
+      await updateMutation({
+        ...mutation,
+        last_error: "Waiting for temporary worker resolution.",
+        status: "failed",
+      });
+      await updateCachedDeductionStatus(mutation.operation_id, "failed");
+      emitQueueChanged();
+      return "failed";
+    }
+
+    if (dependency) {
+      return "waiting";
+    }
+  }
+
+  const payload = mutation.payload as OfflineDeductionPayload;
+
+  await updateMutation({
+    ...mutation,
+    last_error: null,
+    status: "syncing",
+  });
+  await updateCachedDeductionStatus(mutation.operation_id, "syncing");
+  emitQueueChanged();
+
+  const supabase = createClient();
+  const {
+    data: { user },
+    error: userError,
+  } = await supabase.auth.getUser();
+
+  if (userError || !user) {
+    await updateMutation({
+      ...mutation,
+      last_error: "Sign in again to sync pending changes.",
+      status: "pending",
+    });
+    await updateCachedDeductionStatus(mutation.operation_id, "pending");
+    emitQueueChanged();
+    return "auth";
+  }
+
+  if (user.id !== mutation.user_id) {
+    await updateMutation({
+      ...mutation,
+      last_error: "Sign in with the account that created this pending deduction.",
+      status: "pending",
+    });
+    await updateCachedDeductionStatus(mutation.operation_id, "pending");
+    emitQueueChanged();
+    return "auth";
+  }
+
+  const { error } = await supabase.rpc("save_worker_deduction", {
+    p_amount: payload.amount,
+    p_client_operation_id: payload.client_operation_id,
+    p_deduction_id: null,
+    p_note: payload.note,
+    p_transaction_date: payload.transaction_date,
+    p_type: payload.type,
+    p_worker_id: payload.worker_id,
+  });
+
+  if (!error) {
+    await deleteOfflineRecord("pendingMutations", mutation.id);
+    await deleteOfflineRecord("workerDeductions", `local-${mutation.operation_id}`);
+    emitQueueChanged();
+    return "synced";
+  }
+
+  if (isNetworkError(error)) {
+    await updateMutation({
+      ...mutation,
+      last_error: "Sync paused. Waiting for connection.",
+      retry_count: mutation.retry_count + 1,
+      status: "pending",
+    });
+    await updateCachedDeductionStatus(mutation.operation_id, "pending");
+    emitQueueChanged();
+    return "network";
+  }
+
+  await updateMutation({
+    ...mutation,
+    last_error: getFriendlySyncError(error),
+    retry_count: mutation.retry_count + 1,
+    status: "failed",
+  });
+  await updateCachedDeductionStatus(mutation.operation_id, "failed");
+  emitQueueChanged();
+  return "failed";
+}
+
 async function syncMutation(mutation: PendingMutation) {
   if (mutation.entity_type === "temporary_worker") {
     return syncTemporaryWorkerMutation(mutation);
+  }
+
+  if (mutation.entity_type === "worker_deduction") {
+    return syncWorkerDeductionMutation(mutation);
   }
 
   if (mutation.entity_type !== "payroll_work_entry") {

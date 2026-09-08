@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
   createContext,
@@ -195,15 +196,21 @@ export function ConnectionStatusIndicator({
       <span aria-hidden="true" className={`size-2 rounded-full ${dotClassName}`} />
       <span>{label}</span>
       {failedCount > 0 ? (
-        <span className="hidden whitespace-nowrap sm:inline">
+        <Link
+          href="/offline-sync"
+          className="hidden whitespace-nowrap outline-none hover:underline focus-visible:underline sm:inline"
+        >
           {failedCount} change{failedCount === 1 ? "" : "s"} need attention
-        </span>
+        </Link>
       ) : pendingCount > 0 ? (
-        <span className="hidden whitespace-nowrap sm:inline">
+        <Link
+          href="/offline-sync"
+          className="hidden whitespace-nowrap outline-none hover:underline focus-visible:underline sm:inline"
+        >
           {syncStatus === "syncing"
             ? `Syncing ${pendingCount} changes...`
             : `${pendingCount} changes waiting`}
-        </span>
+        </Link>
       ) : isOnline ? (
         <span className="hidden whitespace-nowrap sm:inline">All changes synced</span>
       ) : null}

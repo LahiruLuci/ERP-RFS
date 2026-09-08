@@ -389,6 +389,7 @@ export async function saveWorkerDeduction(input: WorkerDeductionSaveInput) {
 
   const { data, error } = await supabase.rpc("save_worker_deduction", {
     p_amount: input.amount,
+    p_client_operation_id: input.client_operation_id ?? null,
     p_deduction_id: input.id ?? null,
     p_note: input.note,
     p_transaction_date: input.transaction_date,
