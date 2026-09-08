@@ -120,3 +120,38 @@ body {
     background: #f7faff;
   }
 }
+
+@media print {
+  @page {
+    size: A4;
+    margin: 8mm;
+  }
+
+  html,
+  body {
+    background: white !important;
+  }
+
+  body * {
+    visibility: hidden;
+  }
+
+  .payslip-document,
+  .payslip-document * {
+    visibility: visible;
+  }
+
+  .payslip-document {
+    position: absolute;
+    inset: 0 auto auto 0;
+    width: 194mm !important;
+    max-width: 194mm !important;
+    font-size: 11px !important;
+  }
+
+  .payslip-avoid-break,
+  .payslip-table-row {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+}
