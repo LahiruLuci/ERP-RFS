@@ -2,6 +2,7 @@ import Link from "next/link";
 
 import { formatLkr } from "@/lib/format/currency";
 import { getMonthlyPayrollReport, ReportPermissionError } from "@/lib/reports/data";
+import { WorkerTypeBadge } from "../../workers/worker-status-badge";
 
 type MonthlyPayrollProps = {
     searchParams?: Promise<{
@@ -52,6 +53,8 @@ export default async function MonthlyPayrollReportPage({ searchParams }: Monthly
     const rows = data?.rows ?? [];
     const totals = data?.totals;
     const runStatus = data?.run?.status;
+    const periodLabel = `${months[month - 1]} ${year}`;
+    const printHref = `/reports/monthly-payroll/print?month=${month}&year=${year}${search ? `&q=${encodeURIComponent(search)}` : ""}`;
 
     return (
         <div className="flex flex-col gap-4">
@@ -129,6 +132,15 @@ export default async function MonthlyPayrollReportPage({ searchParams }: Monthly
                 </section>
             ) : totals ? (
                 <>
+                    <div className="flex items-center justify-between">
+                        <h2 className="text-lg font-bold text-[var(--text-primary)]">
+                            Monthly Payroll Summary — {periodLabel}
+                        </h2>
+                        <Link className="app-focus btn-secondary min-h-10 rounded-md px-4 text-sm font-bold transition" href={printHref}>
+                            Print / PDF
+                        </Link>
+                    </div>
+
                     <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
                         <div className="app-surface flex flex-col gap-1 rounded-lg p-4">
                             <p className="text-xs font-bold uppercase tracking-wide text-[var(--brand-primary)]">
@@ -196,18 +208,24 @@ export default async function MonthlyPayrollReportPage({ searchParams }: Monthly
                         </section>
                     ) : (
                         <>
-                            <section className="app-surface hidden overflow-hidden rounded-lg lg:block mt-2">
-                                <div className="max-h-[calc(100dvh-26rem)] min-h-[22rem] overflow-auto">
-                                    <table className="min-w-[70rem] divide-y divide-zinc-200 text-sm">
-                                        <thead className="table-head-brand sticky top-0 z-10 text-left text-xs font-bold uppercase tracking-wide">
+                            <section className="app-surface overflow-hidden rounded-lg mt-2">
+                                <div className="overflow-x-auto">
+                                    <table className="w-full min-w-[70rem] divide-y divide-zinc-200 text-sm">
+                                        <thead className="table-head-brand text-left text-xs font-bold uppercase tracking-wide">
                                             <tr>
-                                                <th className="px-4 py-3">Worker ID</th>
+                                                <th className="px-4 py-3">Employee No</th>
                                                 <th className="px-4 py-3">Worker Name</th>
                                                 <th className="px-4 py-3">Type</th>
                                                 <th className="px-4 py-3 text-right">Shifts</th>
                                                 <th className="px-4 py-3 text-right">Gross Salary</th>
-                                                <th className="px-4 py-3 text-right">Deductions</th>
+                                                <th className="px-4 py-3 text-right">Advance</th>
+                                                <th className="px-4 py-3 text-right">EPF</th>
+                                                <th className="px-4 py-3 text-right">Meals</th>
+                                                <th className="px-4 py-3 text-right">Uniform</th>
+                                                <th className="px-4 py-3 text-right">Other</th>
+                                                <th className="px-4 py-3 text-right">Total Deductions</th>
                                                 <th className="px-4 py-3 text-right">Net Salary</th>
+                                                <th className="px-4 py-3 text-right">Status</th>
                                                 <th className="px-4 py-3 text-right">Action</th>
                                             </tr>
                                         </thead>
@@ -221,15 +239,7 @@ export default async function MonthlyPayrollReportPage({ searchParams }: Monthly
                                                         {worker.full_name}
                                                     </td>
                                                     <td className="px-4 py-4">
-                                                        {worker.worker_type === "temporary" ? (
-                                                            <span className="inline-flex rounded-full border border-orange-200 bg-orange-50 px-2 py-0.5 text-xs font-semibold text-orange-700">
-                                                                Temporary
-                                                            </span>
-                                                        ) : (
-                                                            <span className="inline-flex rounded-full border border-blue-200 bg-blue-50 px-2 py-0.5 text-xs font-semibold text-blue-700">
-                                                                Permanent
-                                                            </span>
-                                                        )}
+                                                        <WorkerTypeBadge type={worker.worker_type as "permanent" | "temporary"} />
                                                     </td>
                                                     <td className="whitespace-nowrap px-4 py-4 text-right tabular-nums">
                                                         {shifts}
@@ -237,11 +247,35 @@ export default async function MonthlyPayrollReportPage({ searchParams }: Monthly
                                                     <td className="whitespace-nowrap px-4 py-4 text-right font-semibold tabular-nums text-[var(--text-primary)]">
                                                         {formatLkr(record.gross)}
                                                     </td>
-                                                    <td className="whitespace-nowrap px-4 py-4 text-right tabular-nums text-[var(--text-secondary)]">
-                                                        {formatLkr(record.deductions)}
+                                                    <td className="whitespace-nowrap px-4 py-4 text-right tabular-nums">
+                                                        {formatLkr(record.advance)}
+                                                    </td>
+                                                    <td className="whitespace-nowrap px-4 py-4 text-right tabular-nums">
+                                                        {formatLkr(record.epf)}
+                                                    </td>
+                                                    <td className="whitespace-nowrap px-4 py-4 text-right tabular-nums">
+                                                        {formatLkr(record.meals)}
+                                                    </td>
+                                                    <td className="whitespace-nowrap px-4 py-4 text-right tabular-nums">
+                                                        {formatLkr(record.uniform)}
+                                                    </td>
+                                                    <td className="whitespace-nowrap px-4 py-4 text-right tabular-nums">
+                                                        {formatLkr(record.otherDeduction)}
+                                                    </td>
+                                                    <td className="whitespace-nowrap px-4 py-4 text-right font-semibold tabular-nums text-[var(--text-secondary)]">
+                                                        {formatLkr(record.totalDeductions)}
                                                     </td>
                                                     <td className="whitespace-nowrap px-4 py-4 text-right font-bold tabular-nums text-[var(--brand-primary)]">
                                                         {formatLkr(record.net)}
+                                                    </td>
+                                                    <td className="whitespace-nowrap px-4 py-4 text-right">
+                                                        {runStatus ? (
+                                                            <span className={`inline-flex rounded-full border px-2 py-0.5 text-xs font-bold ${runStatus === "approved" ? "border-green-200 bg-green-50 text-green-700" : "border-slate-200 bg-slate-50 text-slate-700"}`}>
+                                                                {runStatus === "approved" ? "Approved" : "Draft"}
+                                                            </span>
+                                                        ) : (
+                                                            <span className="text-xs text-slate-500">-</span>
+                                                        )}
                                                     </td>
                                                     <td className="whitespace-nowrap px-4 py-4 text-right">
                                                         <Link
@@ -272,9 +306,10 @@ export default async function MonthlyPayrollReportPage({ searchParams }: Monthly
                                                 </h2>
                                             </div>
                                             <div className="shrink-0 flex flex-col items-end gap-1">
-                                                {worker.worker_type === "temporary" ? (
-                                                    <span className="inline-flex rounded-full border border-orange-200 bg-orange-50 px-2 py-0.5 text-[0.65rem] font-semibold text-orange-700">
-                                                        Temporary
+                                                <WorkerTypeBadge type={worker.worker_type as "permanent" | "temporary"} />
+                                                {runStatus ? (
+                                                    <span className={`inline-flex rounded-full border px-2 py-0.5 text-xs font-bold ${runStatus === "approved" ? "border-green-200 bg-green-50 text-green-700" : "border-slate-200 bg-slate-50 text-slate-700"}`}>
+                                                        {runStatus === "approved" ? "Approved" : "Draft"}
                                                     </span>
                                                 ) : null}
                                             </div>
@@ -292,9 +327,39 @@ export default async function MonthlyPayrollReportPage({ searchParams }: Monthly
                                                 </dd>
                                             </div>
                                             <div>
-                                                <dt className="text-[var(--text-secondary)]">Deductions</dt>
+                                                <dt className="text-[var(--text-secondary)]">Advance</dt>
                                                 <dd className="font-semibold tabular-nums">
-                                                    {formatLkr(record.deductions)}
+                                                    {formatLkr(record.advance)}
+                                                </dd>
+                                            </div>
+                                            <div>
+                                                <dt className="text-[var(--text-secondary)]">EPF</dt>
+                                                <dd className="font-semibold tabular-nums">
+                                                    {formatLkr(record.epf)}
+                                                </dd>
+                                            </div>
+                                            <div>
+                                                <dt className="text-[var(--text-secondary)]">Meals</dt>
+                                                <dd className="font-semibold tabular-nums">
+                                                    {formatLkr(record.meals)}
+                                                </dd>
+                                            </div>
+                                            <div>
+                                                <dt className="text-[var(--text-secondary)]">Uniform</dt>
+                                                <dd className="font-semibold tabular-nums">
+                                                    {formatLkr(record.uniform)}
+                                                </dd>
+                                            </div>
+                                            <div>
+                                                <dt className="text-[var(--text-secondary)]">Other</dt>
+                                                <dd className="font-semibold tabular-nums">
+                                                    {formatLkr(record.otherDeduction)}
+                                                </dd>
+                                            </div>
+                                            <div>
+                                                <dt className="text-[var(--text-secondary)]">Total Deductions</dt>
+                                                <dd className="font-semibold tabular-nums">
+                                                    {formatLkr(record.totalDeductions)}
                                                 </dd>
                                             </div>
                                             <div>

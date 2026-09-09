@@ -72,7 +72,18 @@ export async function getMonthlyPayrollReport({
         return {
             run: null,
             rows: [],
-            totals: { workers: 0, shifts: 0, gross: 0, deductions: 0, net: 0 },
+            totals: {
+                advance: 0,
+                deductions: 0,
+                epf: 0,
+                gross: 0,
+                meals: 0,
+                net: 0,
+                otherDeduction: 0,
+                shifts: 0,
+                uniform: 0,
+                workers: 0,
+            },
         };
     }
 
@@ -129,6 +140,11 @@ export async function getMonthlyPayrollReport({
     let totalWorkers = 0;
     let totalShifts = 0;
     let totalGross = 0;
+    let totalAdvance = 0;
+    let totalEpf = 0;
+    let totalMeals = 0;
+    let totalUniform = 0;
+    let totalOtherDeduction = 0;
     let totalDeductions = 0;
     let totalNet = 0;
 
@@ -140,23 +156,37 @@ export async function getMonthlyPayrollReport({
         const entries = (record.payroll_work_entries ?? []) as EntryType[];
         const shiftsSum = entries.reduce((sum, e) => sum + Number(e.shifts ?? 0), 0);
         const gross = Number(record.gross_salary ?? 0);
+        const advance = Number(record.advance ?? 0);
+        const epf = Number(record.epf ?? 0);
+        const meals = Number(record.meals ?? 0);
+        const uniform = Number(record.uniform ?? 0);
+        const otherDeduction = Number(record.other_deduction ?? 0);
         const deductions = Number(record.total_deductions ?? 0);
         const net = Number(record.net_salary ?? 0);
 
-        // Aggregate for summary
         totalWorkers += 1;
         totalShifts += shiftsSum;
         totalGross += gross;
+        totalAdvance += advance;
+        totalEpf += epf;
+        totalMeals += meals;
+        totalUniform += uniform;
+        totalOtherDeduction += otherDeduction;
         totalDeductions += deductions;
         totalNet += net;
 
         return {
             worker,
             record: {
+                advance,
+                epf,
+                gross,
                 id: record.id,
-                gross: gross,
-                deductions: deductions,
-                net: net,
+                meals,
+                net,
+                otherDeduction,
+                totalDeductions: deductions,
+                uniform,
                 workplaces: entries.slice(0, 2).map((e) => `${e.workplace_name} (${e.shifts})`).join(", ") || "Not entered",
             },
             shifts: shiftsSum,
@@ -167,11 +197,16 @@ export async function getMonthlyPayrollReport({
         run: { status: run.status },
         rows,
         totals: {
-            workers: totalWorkers,
-            shifts: totalShifts,
-            gross: totalGross,
+            advance: totalAdvance,
             deductions: totalDeductions,
+            epf: totalEpf,
+            gross: totalGross,
+            meals: totalMeals,
             net: totalNet,
+            otherDeduction: totalOtherDeduction,
+            shifts: totalShifts,
+            uniform: totalUniform,
+            workers: totalWorkers,
         },
     };
 }

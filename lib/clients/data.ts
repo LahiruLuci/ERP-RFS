@@ -14,6 +14,8 @@ import type {
   ClientInput,
   ClientStatus,
   ClientWithWorkpointCount,
+  ClientWorkpointSummary,
+  ClientWorkpointWorkerSummary,
   Workpoint,
   WorkpointInput,
   WorkpointPayrollEntry,
@@ -305,6 +307,7 @@ function summarizeEntries(
     entriesCount: entries.length,
     shifts: entries.reduce((total, entry) => total + Number(entry.shifts ?? 0), 0),
     workersCount: new Set(entries.map((entry) => entry.worker_id)).size,
+    workpointsUsed: entries.length > 0 ? 1 : 0,
   };
 }
 
@@ -454,6 +457,8 @@ export async function getPayrollByClientData({
   await assertPayrollEntryAccess(supabase);
 
   const summaries = new Map<string, WorkpointPayrollSummary>();
+  const clientWorkerSets = new Map<string, Set<string>>();
+  const clientWorkpointSets = new Map<string, Set<string>>();
 
   for (const client of clients) {
     summaries.set(client.id, {
@@ -461,10 +466,340 @@ export async function getPayrollByClientData({
       entriesCount: 0,
       shifts: 0,
       workersCount: 0,
+      workpointsUsed: 0,
     });
+    clientWorkerSets.set(client.id, new Set());
+    clientWorkpointSets.set(client.id, new Set());
   }
 
-  return { clients, period: getPayrollPeriod(year, month), summaries };
+  const unattributed = {
+    contribution: 0,
+    entriesCount: 0,
+    shifts: 0,
+    workersCount: 0,
+    workpointsUsed: 0,
+  };
+  const unattributedWorkers = new Set<string>();
+  const workpointsByClient = new Map<string, ClientWorkpointSummary[]>();
+  const workersByClientWorkpoint = new Map<string, Map<string, ClientWorkpointWorkerSummary[]>>();
+
+  const configuredWorkpointsByClient = new Map<string, Workpoint[]>();
+
+  if (clients.length > 0) {
+    const { data: workpoints, error: workpointsError } = await supabase
+      .from("workplaces")
+      .select(workpointSelect)
+      .in("client_id", clients.map((client) => client.id))
+      .order("name", { ascending: true });
+
+    if (workpointsError) {
+      handleClientError("workpoints.selectForClients", workpointsError);
+    }
+
+    for (const workpoint of (workpoints ?? []) as Workpoint[]) {
+      const list = configuredWorkpointsByClient.get(workpoint.client_id) ?? [];
+      list.push(workpoint);
+      configuredWorkpointsByClient.set(workpoint.client_id, list);
+    }
+  }
+
+  const { data: run, error: runError } = await supabase
+    .from("payroll_runs")
+    .select("id, status")
+    .eq("year", year)
+    .eq("month", month)
+    .maybeSingle();
+
+  if (runError) {
+    handleClientError("payroll_runs.select", runError);
+  }
+
+  if (run?.id) {
+    type ClientPayrollEntryRow = {
+      line_gross: number | string | null;
+      shift_rate: number | string | null;
+      shifts: number | string | null;
+      workplace_id: string | null;
+      workplace_name: string | null;
+      workplaces: {
+        id: string | null;
+        name: string | null;
+        workplace_code: string | null;
+        client_id: string | null;
+        clients: {
+          id: string | null;
+          name: string | null;
+          client_code: string | null;
+        } | null;
+      } | null;
+      payroll_records: {
+        payroll_run_id: string;
+        workers: {
+          employee_no: string;
+          full_name: string;
+          id: string;
+          worker_type: string;
+        } | null;
+      } | null;
+    };
+
+    function firstOrValue<T>(
+      value: T | T[] | null | undefined,
+    ): T | null | undefined {
+      if (value == null) {
+        return value;
+      }
+
+      if (Array.isArray(value)) {
+        return value.length > 0 ? value[0] : null;
+      }
+
+      return value;
+    }
+
+    const clientWorkpointMap = new Map<
+      string,
+      Map<
+        string,
+        {
+          code: string;
+          contribution: number;
+          id: string;
+          name: string;
+          shifts: number;
+          workerSet: Set<string>;
+        }
+      >
+    >();
+
+    const workersByClientWorkpointAggr = new Map<
+      string,
+      Map<
+        string,
+        Map<
+          string,
+          {
+            code: string;
+            contribution: number;
+            employeeNo: string;
+            id: string;
+            name: string;
+            rateSet: Set<number>;
+            shifts: number;
+            workerType: string;
+          }
+        >
+      >
+    >();
+
+    const { data: entriesData, error: entriesError } = await supabase
+      .from("payroll_work_entries")
+      .select(`
+        id,
+        workplace_id,
+        workplace_name,
+        shifts,
+        shift_rate,
+        line_gross,
+        workplaces (
+          id,
+          name,
+          workplace_code,
+          client_id,
+          clients (
+            id,
+            name,
+            client_code
+          )
+        ),
+        payroll_records!inner (
+          payroll_run_id,
+          workers!inner (
+            id,
+            employee_no,
+            full_name,
+            worker_type
+          )
+        )
+      `)
+      .eq("payroll_records.payroll_run_id", run.id);
+
+    if (entriesError) {
+      handleClientError("payroll_work_entries.select", entriesError);
+    }
+
+    const entries = (entriesData ?? []) as unknown as ClientPayrollEntryRow[];
+
+    for (const entry of entries) {
+      const shifts = Number(entry.shifts ?? 0);
+      const contribution = Number(entry.line_gross ?? 0);
+      const wp = firstOrValue(entry.workplaces);
+      const record = firstOrValue(entry.payroll_records);
+      const worker = record?.workers ?? null;
+
+      const client = wp?.clients ?? null;
+
+      if (client?.id) {
+        const aggr = summaries.get(client.id);
+
+        if (!aggr) {
+          continue;
+        }
+
+        aggr.contribution += contribution;
+        aggr.entriesCount += 1;
+        aggr.shifts += shifts;
+
+        if (worker?.id) {
+          clientWorkerSets.get(client.id)?.add(worker.id);
+        }
+
+        if (wp?.id) {
+          clientWorkpointSets.get(client.id)?.add(wp.id);
+
+          let wpMap = clientWorkpointMap.get(client.id);
+
+          if (!wpMap) {
+            wpMap = new Map();
+            clientWorkpointMap.set(client.id, wpMap);
+          }
+
+          let wpAggr = wpMap.get(wp.id);
+
+          if (!wpAggr) {
+            wpAggr = {
+              code: wp.workplace_code ?? "N/A",
+              contribution: 0,
+              id: wp.id,
+              name: wp.name ?? "Unnamed Workpoint",
+              shifts: 0,
+              workerSet: new Set(),
+            };
+
+            wpMap.set(wp.id, wpAggr);
+          }
+
+          wpAggr.contribution += contribution;
+          wpAggr.shifts += shifts;
+
+          if (worker?.id) {
+            wpAggr.workerSet.add(worker.id);
+
+            let wpWorkerMap = workersByClientWorkpointAggr.get(client.id);
+
+            if (!wpWorkerMap) {
+              wpWorkerMap = new Map();
+              workersByClientWorkpointAggr.set(client.id, wpWorkerMap);
+            }
+
+            let workerMap = wpWorkerMap.get(wp.id);
+
+            if (!workerMap) {
+              workerMap = new Map();
+              wpWorkerMap.set(wp.id, workerMap);
+            }
+
+            let wAggr = workerMap.get(worker.id);
+
+            if (!wAggr) {
+              const workerData = firstOrValue(record?.workers);
+
+              wAggr = {
+                code: wp.workplace_code ?? "N/A",
+                contribution: 0,
+                employeeNo: workerData?.employee_no ?? "",
+                id: worker.id,
+                name: workerData?.full_name ?? "Unknown",
+                rateSet: new Set(),
+                shifts: 0,
+                workerType: workerData?.worker_type ?? "permanent",
+              };
+
+              workerMap.set(worker.id, wAggr);
+            }
+
+            wAggr.contribution += contribution;
+            wAggr.shifts += shifts;
+
+            if (entry.shift_rate != null) {
+              wAggr.rateSet.add(Number(entry.shift_rate));
+            }
+          }
+        }
+      } else {
+        unattributed.contribution += contribution;
+        unattributed.entriesCount += 1;
+        unattributed.shifts += shifts;
+
+        if (worker?.id) {
+          unattributedWorkers.add(worker.id);
+        }
+      }
+    }
+
+    for (const [clientId, aggr] of summaries) {
+      aggr.workersCount = clientWorkerSets.get(clientId)?.size ?? 0;
+      aggr.workpointsUsed = clientWorkpointSets.get(clientId)?.size ?? 0;
+    }
+
+    unattributed.workersCount = unattributedWorkers.size;
+
+    for (const [clientId, wpMap] of workersByClientWorkpointAggr) {
+      const result = new Map<string, ClientWorkpointWorkerSummary[]>();
+
+      for (const [wpId, workerMap] of wpMap) {
+        const workers = Array.from(workerMap.values())
+          .sort((a, b) => a.name.localeCompare(b.name))
+          .map((w) => ({
+            code: w.code,
+            contribution: w.contribution,
+            employeeNo: w.employeeNo,
+            id: w.id,
+            name: w.name,
+            rates: Array.from(w.rateSet).sort((a, b) => a - b),
+            shifts: w.shifts,
+            workerType: w.workerType,
+          }));
+
+        result.set(wpId, workers);
+      }
+
+      workersByClientWorkpoint.set(clientId, result);
+    }
+
+    for (const client of clients) {
+      const configured = configuredWorkpointsByClient.get(client.id) ?? [];
+      const wpMap = clientWorkpointMap.get(client.id);
+
+      workpointsByClient.set(
+        client.id,
+        configured
+          .map((wp) => {
+            const wpAggr = wpMap?.get(wp.id);
+            return {
+              code: wp.workplace_code,
+              contribution: wpAggr?.contribution ?? 0,
+              id: wp.id,
+              name: wp.name,
+              shifts: wpAggr?.shifts ?? 0,
+              status: wp.status,
+              workersCount: wpAggr?.workerSet.size ?? 0,
+            };
+          })
+          .sort((a, b) => a.name.localeCompare(b.name)),
+      );
+    }
+  }
+
+  return {
+    clients,
+    period: getPayrollPeriod(year, month),
+    run: run ?? null,
+    summaries,
+    workpointsByClient,
+    workersByClientWorkpoint,
+    unattributed,
+  };
 }
 
 export async function getWorkpointPayrollWorkspace({

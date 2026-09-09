@@ -41,6 +41,7 @@ export type Workpoint = {
   required_guards: number | string;
   status: ClientStatus;
   updated_at?: string;
+  workplace_code: string;
 };
 
 export type ClientInput = {
@@ -81,11 +82,33 @@ export type WorkpointPayrollEntry = {
   worker_type: WorkerType;
 };
 
+export type ClientWorkpointSummary = {
+  code: string;
+  contribution: number;
+  id: string;
+  name: string;
+  shifts: number;
+  status: string;
+  workersCount: number;
+};
+
+export type ClientWorkpointWorkerSummary = {
+  code: string;
+  contribution: number;
+  employeeNo: string;
+  id: string;
+  name: string;
+  rates: number[];
+  shifts: number;
+  workerType: string;
+};
+
 export type WorkpointPayrollSummary = {
   contribution: number;
   entriesCount: number;
   shifts: number;
   workersCount: number;
+  workpointsUsed: number;
 };
 
 export type WorkpointPayrollSaveInput = {

@@ -137,7 +137,9 @@ body {
   }
 
   .payslip-document,
-  .payslip-document * {
+  .payslip-document *,
+  .monthly-payroll-document,
+  .monthly-payroll-document * {
     visibility: visible;
   }
 
@@ -147,6 +149,14 @@ body {
     width: 194mm !important;
     max-width: 194mm !important;
     font-size: 11px !important;
+  }
+
+  .monthly-payroll-document {
+    position: absolute;
+    inset: 0 auto auto 0;
+    width: 281mm !important;
+    max-width: 281mm !important;
+    font-size: 10px !important;
   }
 
   .payslip-avoid-break,
