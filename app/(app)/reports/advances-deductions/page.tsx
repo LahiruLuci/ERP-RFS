@@ -163,7 +163,7 @@ export default async function AdvancesDeductionsReportPage({
   const workerSummaries = reportData?.workerSummaries ?? [];
 
   return (
-    <div className="flex flex-col gap-4 pb-12">
+    <div className="flex flex-col gap-4 pt-4 pb-12">
       <div className="flex items-center gap-2 text-sm text-[var(--text-secondary)]">
         <Link
           className="app-focus hover:text-[var(--text-primary)] hover:underline"

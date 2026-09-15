@@ -159,6 +159,10 @@ export function validateWorkerForm(
     fieldErrors.joined_date = "Choose a valid joined date.";
   }
 
+  if (options.isCreate && workerType === "permanent" && !joinedDate) {
+    fieldErrors.joined_date = "Joined date is required for permanent workers.";
+  }
+
   if (statusEffectiveDate === "invalid") {
     fieldErrors.status_effective_date = "Choose a valid effective date.";
   }

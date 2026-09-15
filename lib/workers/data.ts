@@ -472,10 +472,10 @@ function validateTemporaryWorkerInput(
   input: TemporaryWorkerInput,
 ): TemporaryWorkerInput {
   const fullName = input.full_name.trim();
-  const nic = input.nic.trim();
-  const phone = input.phone.trim();
+  const nic = input.nic?.trim() || null;
+  const phone = input.phone?.trim() || null;
 
-  if (!fullName || !nic || !phone) {
+  if (!fullName) {
     throw new WorkerConstraintError();
   }
 

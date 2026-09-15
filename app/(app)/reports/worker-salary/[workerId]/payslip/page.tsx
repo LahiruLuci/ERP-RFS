@@ -72,7 +72,7 @@ export default async function WorkerPayslipPage({
   const backHref = `/reports/worker-salary?workerId=${workerId}&month=${month}&year=${year}`;
 
   return (
-    <div className="worker-payslip-page flex flex-col gap-4 pb-10">
+    <div className="worker-payslip-page flex flex-col gap-4 pt-4 pb-10">
       <div className="print:hidden">
         <div className="flex items-center gap-2 text-sm text-[var(--text-secondary)]">
           <Link

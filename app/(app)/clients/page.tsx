@@ -71,7 +71,7 @@ export default async function ClientsPage({ searchParams }: ClientsPageProps) {
   }
 
   return (
-    <div className="flex flex-col gap-5">
+    <div className="flex flex-col gap-5 pt-4">
       {!search ? <OfflineCacheHydrator clients={clients} /> : null}
       <section className="app-surface overflow-hidden rounded-lg">
         <div className="flex flex-col gap-4 border-l-4 border-[var(--brand-accent)] p-4 sm:p-5 lg:flex-row lg:items-center lg:justify-between">

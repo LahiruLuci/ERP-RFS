@@ -75,6 +75,10 @@ export function WorkerForm({ action, cancelHref, worker }: WorkerFormProps) {
   const [selectedStatus, setSelectedStatus] = useState<WorkerStatus>(
     worker?.status ?? "active",
   );
+  const [selectedWorkerType, setSelectedWorkerType] = useState<string>(
+    worker?.worker_type ?? "permanent",
+  );
+  const isPermanentCreate = !worker && selectedWorkerType === "permanent";
   const hasStatusTransition = worker
     ? selectedStatus !== worker.status
     : selectedStatus !== "active";
@@ -256,6 +260,10 @@ export function WorkerForm({ action, cancelHref, worker }: WorkerFormProps) {
             defaultValue={worker?.worker_type ?? "permanent"}
             disabled={isPending}
             name="worker_type"
+            onChange={(event) => {
+              const nextType = event.target.value;
+              setSelectedWorkerType(nextType);
+            }}
           >
             {workerTypes.map((workerType) => (
               <option key={workerType} value={workerType}>
@@ -302,13 +310,14 @@ export function WorkerForm({ action, cancelHref, worker }: WorkerFormProps) {
 
         <label className="flex flex-col gap-2">
           <span className="text-sm font-semibold text-[var(--text-primary)]">
-            Joined Date
+            Joined Date {isPermanentCreate ? "*" : ""}
           </span>
           <input
             className="field-control h-11 rounded-md px-3 text-sm transition"
             defaultValue={formatDateInput(worker?.joined_date)}
             disabled={isPending}
             name="joined_date"
+            required={isPermanentCreate}
             type="date"
           />
           <FieldError message={state.fieldErrors?.joined_date} />

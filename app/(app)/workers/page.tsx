@@ -187,6 +187,7 @@ function formatFilterMoney(value: string) {
     ? formatLkr(numberValue)
     : "Any";
 }
+
 function getActiveFilterChips(filterState: FilterState) {
   const chips: string[] = [];
 
@@ -283,35 +284,31 @@ export default async function WorkersPage({ searchParams }: WorkersPageProps) {
   }
 
   return (
-    <div className="flex flex-col gap-4">
+    <div className="flex flex-col gap-4 pt-4">
       {!loadError && !search && !hasFilters ? (
         <OfflineCacheHydrator workers={workers} />
       ) : null}
-      <section className="app-surface overflow-hidden rounded-lg">
-        <div className="flex flex-col gap-3 border-l-4 border-[var(--brand-accent)] p-4 sm:p-5 lg:flex-row lg:items-center lg:justify-between">
-          <div>
-            <p className="brand-kicker">Workforce</p>
-            <h1 className="mt-1 text-2xl font-bold tracking-tight text-[var(--text-primary)] sm:text-3xl">
-              Workers
-            </h1>
-            <p className="mt-1 max-w-2xl text-sm leading-6 text-[var(--text-secondary)]">
-              Manage worker profiles, employment details, and salary reference
-              values used by future payroll workflows.
-            </p>
-          </div>
 
-          <Link
-            className="app-focus btn-primary flex min-h-10 items-center justify-center rounded-md px-4 text-sm font-bold transition"
-            href="/workers/new"
-          >
-            Add Worker
-          </Link>
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <h1 className="text-xl font-bold text-[var(--text-primary)] sm:text-2xl">
+            Workers
+          </h1>
+          <p className="mt-0.5 text-sm text-[var(--text-secondary)]">
+            Manage workforce profiles and employment details.
+          </p>
         </div>
-      </section>
+        <Link
+          className="app-focus btn-primary inline-flex min-h-10 items-center justify-center rounded-md px-4 text-sm font-bold transition"
+          href="/workers/new"
+        >
+          Add Worker
+        </Link>
+      </div>
 
-      <section className="app-surface rounded-lg p-3 sm:p-4">
-        <form className="flex flex-col gap-3" role="search">
-          <div className="flex flex-col gap-3 lg:flex-row">
+      <section className="app-surface rounded-lg p-4 sm:p-5">
+        <form className="flex flex-col gap-4" role="search">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
             <label className="sr-only" htmlFor="worker-search">
               Search workers
             </label>
@@ -323,7 +320,7 @@ export default async function WorkersPage({ searchParams }: WorkersPageProps) {
               placeholder="Search by name, employee no, NIC, ETF no or phone"
               type="search"
             />
-            <div className="flex gap-3">
+            <div className="flex gap-2">
               <button
                 className="app-focus btn-primary min-h-10 flex-1 rounded-md px-4 text-sm font-bold transition sm:flex-none"
                 type="submit"
@@ -335,7 +332,7 @@ export default async function WorkersPage({ searchParams }: WorkersPageProps) {
                   className="app-focus btn-secondary flex min-h-10 flex-1 items-center justify-center rounded-md px-4 text-sm font-bold transition sm:flex-none"
                   href={getClearFiltersHref(search)}
                 >
-                  Clear Filters
+                  Clear
                 </Link>
               ) : null}
               {search ? (
@@ -349,81 +346,69 @@ export default async function WorkersPage({ searchParams }: WorkersPageProps) {
             </div>
           </div>
 
-          <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-[1fr_1fr_14rem_14rem]">
-            <fieldset className="rounded-md border border-[var(--border)] px-3 pb-3 pt-2">
-              <legend className="px-1 text-xs font-bold uppercase tracking-wide text-[var(--brand-primary)]">
-                Basic Salary (LKR)
-              </legend>
-              <div className="grid gap-2 sm:grid-cols-2">
-                <label className="flex flex-col gap-1.5">
-                  <span className="text-xs font-semibold text-[var(--text-secondary)]">
-                    Min Salary
-                  </span>
-                  <input
-                    className="field-control min-h-9 rounded-md px-3 text-sm transition"
-                    defaultValue={filterState.basicMin}
-                    min="0"
-                    name="basicMin"
-                    placeholder="Rs. min"
-                    step="0.01"
-                    type="number"
-                  />
-                </label>
-                <label className="flex flex-col gap-1.5">
-                  <span className="text-xs font-semibold text-[var(--text-secondary)]">
-                    Max Salary
-                  </span>
-                  <input
-                    className="field-control min-h-9 rounded-md px-3 text-sm transition"
-                    defaultValue={filterState.basicMax}
-                    min="0"
-                    name="basicMax"
-                    placeholder="Rs. max"
-                    step="0.01"
-                    type="number"
-                  />
-                </label>
-              </div>
-            </fieldset>
+          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+            <label className="flex flex-col gap-1.5">
+              <span className="text-[11px] font-bold uppercase tracking-wide text-[var(--text-secondary)]">
+                Basic Salary Min
+              </span>
+              <input
+                className="field-control min-h-9 rounded-md px-3 text-sm transition"
+                defaultValue={filterState.basicMin}
+                min="0"
+                name="basicMin"
+                placeholder="Any"
+                step="0.01"
+                type="number"
+              />
+            </label>
 
-            <fieldset className="rounded-md border border-[var(--border)] px-3 pb-3 pt-2">
-              <legend className="px-1 text-xs font-bold uppercase tracking-wide text-[var(--brand-primary)]">
-                Shift Rate (LKR)
-              </legend>
-              <div className="grid gap-2 sm:grid-cols-2">
-                <label className="flex flex-col gap-1.5">
-                  <span className="text-xs font-semibold text-[var(--text-secondary)]">
-                    Min Rate
-                  </span>
-                  <input
-                    className="field-control min-h-9 rounded-md px-3 text-sm transition"
-                    defaultValue={filterState.rateMin}
-                    min="0"
-                    name="rateMin"
-                    placeholder="Rs. min"
-                    step="0.01"
-                    type="number"
-                  />
-                </label>
-                <label className="flex flex-col gap-1.5">
-                  <span className="text-xs font-semibold text-[var(--text-secondary)]">
-                    Max Rate
-                  </span>
-                  <input
-                    className="field-control min-h-9 rounded-md px-3 text-sm transition"
-                    defaultValue={filterState.rateMax}
-                    min="0"
-                    name="rateMax"
-                    placeholder="Rs. max"
-                    step="0.01"
-                    type="number"
-                  />
-                </label>
-              </div>
-            </fieldset>
+            <label className="flex flex-col gap-1.5">
+              <span className="text-[11px] font-bold uppercase tracking-wide text-[var(--text-secondary)]">
+                Basic Salary Max
+              </span>
+              <input
+                className="field-control min-h-9 rounded-md px-3 text-sm transition"
+                defaultValue={filterState.basicMax}
+                min="0"
+                name="basicMax"
+                placeholder="Any"
+                step="0.01"
+                type="number"
+              />
+            </label>
 
-            <label className="flex flex-col gap-1.5 rounded-md border border-[var(--border)] px-3 pb-3 pt-2">
-              <span className="text-xs font-bold uppercase tracking-wide text-[var(--brand-primary)]">
+            <label className="flex flex-col gap-1.5">
+              <span className="text-[11px] font-bold uppercase tracking-wide text-[var(--text-secondary)]">
+                Shift Rate Min
+              </span>
+              <input
+                className="field-control min-h-9 rounded-md px-3 text-sm transition"
+                defaultValue={filterState.rateMin}
+                min="0"
+                name="rateMin"
+                placeholder="Any"
+                step="0.01"
+                type="number"
+              />
+            </label>
+
+            <label className="flex flex-col gap-1.5">
+              <span className="text-[11px] font-bold uppercase tracking-wide text-[var(--text-secondary)]">
+                Shift Rate Max
+              </span>
+              <input
+                className="field-control min-h-9 rounded-md px-3 text-sm transition"
+                defaultValue={filterState.rateMax}
+                min="0"
+                name="rateMax"
+                placeholder="Any"
+                step="0.01"
+                type="number"
+              />
+            </label>
+
+            <label className="flex flex-col gap-1.5">
+              <span className="text-[11px] font-bold uppercase tracking-wide text-[var(--text-secondary)]">
                 Worker Type
               </span>
               <select
@@ -440,8 +425,8 @@ export default async function WorkersPage({ searchParams }: WorkersPageProps) {
               </select>
             </label>
 
-            <label className="flex flex-col gap-1.5 rounded-md border border-[var(--border)] px-3 pb-3 pt-2">
-              <span className="text-xs font-bold uppercase tracking-wide text-[var(--brand-primary)]">
+            <label className="flex flex-col gap-1.5">
+              <span className="text-[11px] font-bold uppercase tracking-wide text-[var(--text-secondary)]">
                 Worker Status
               </span>
               <select
@@ -488,8 +473,8 @@ export default async function WorkersPage({ searchParams }: WorkersPageProps) {
         <>
           <section className="app-surface hidden overflow-hidden rounded-lg lg:block">
             <div className="max-h-[calc(100dvh-22rem)] min-h-[18rem] overflow-auto">
-              <table className="min-w-full divide-y divide-zinc-200 text-sm">
-                <thead className="table-head-brand sticky top-0 z-10 text-left text-xs font-bold uppercase tracking-wide">
+              <table className="min-w-full text-sm">
+                <thead className="sticky top-0 z-10 bg-[#f4f7fb] text-left text-xs font-bold uppercase tracking-wide text-[var(--text-secondary)]">
                   <tr>
                     <th className="px-4 py-3">Employee No</th>
                     <th className="px-4 py-3">Full Name</th>
@@ -503,46 +488,46 @@ export default async function WorkersPage({ searchParams }: WorkersPageProps) {
                     <th className="px-4 py-3 text-right">Actions</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-zinc-200">
+                <tbody className="divide-y divide-[var(--border)]">
                   {workers.map((worker) => (
-                    <tr className="table-row-brand" key={worker.id}>
-                      <td className="whitespace-nowrap px-4 py-4 font-bold text-[var(--text-primary)]">
+                    <tr className="transition hover:bg-[var(--surface-muted)]" key={worker.id}>
+                      <td className="whitespace-nowrap px-4 py-3 font-bold text-[var(--text-primary)]">
                         {worker.employee_no}
                       </td>
-                      <td className="px-4 py-4 font-semibold text-[var(--text-primary)]">
+                      <td className="px-4 py-3 font-semibold text-[var(--text-primary)]">
                         {worker.full_name}
                       </td>
-                      <td className="whitespace-nowrap px-4 py-4 text-[var(--text-secondary)]">
+                      <td className="whitespace-nowrap px-4 py-3 text-[var(--text-secondary)]">
                         {worker.nic || "-"}
                       </td>
-                      <td className="whitespace-nowrap px-4 py-4 text-[var(--text-secondary)]">
+                      <td className="whitespace-nowrap px-4 py-3 text-[var(--text-secondary)]">
                         {worker.etf_no || "-"}
                       </td>
-                      <td className="whitespace-nowrap px-4 py-4 text-[var(--text-secondary)]">
+                      <td className="whitespace-nowrap px-4 py-3 text-[var(--text-secondary)]">
                         {worker.phone || "-"}
                       </td>
-                      <td className="whitespace-nowrap px-4 py-4">
+                      <td className="whitespace-nowrap px-4 py-3">
                         <WorkerTypeBadge type={worker.worker_type} />
                       </td>
-                      <td className="whitespace-nowrap px-4 py-4 text-right font-medium tabular-nums text-[var(--text-primary)]">
+                      <td className="whitespace-nowrap px-4 py-3 text-right font-medium tabular-nums text-[var(--text-primary)]">
                         {formatLkr(worker.basic_salary)}
                       </td>
-                      <td className="whitespace-nowrap px-4 py-4 text-right font-medium tabular-nums text-[var(--text-primary)]">
+                      <td className="whitespace-nowrap px-4 py-3 text-right font-medium tabular-nums text-[var(--text-primary)]">
                         {formatLkr(worker.default_shift_rate)}
                       </td>
-                      <td className="whitespace-nowrap px-4 py-4">
+                      <td className="whitespace-nowrap px-4 py-3">
                         <WorkerStatusBadge status={worker.status} />
                       </td>
-                      <td className="whitespace-nowrap px-4 py-4 text-right">
+                      <td className="whitespace-nowrap px-4 py-3 text-right">
                         <div className="flex justify-end gap-2">
                           <Link
-                            className="app-focus btn-secondary rounded-md px-3 py-2 text-xs font-bold transition"
+                            className="app-focus rounded-md border border-[var(--border)] bg-white px-3 py-1.5 text-xs font-bold text-[var(--text-primary)] transition hover:border-[var(--brand-primary)] hover:text-[var(--brand-primary)]"
                             href={`/workers/${worker.id}`}
                           >
                             View
                           </Link>
                           <Link
-                            className="app-focus btn-primary rounded-md px-3 py-2 text-xs font-bold transition"
+                            className="app-focus rounded-md bg-[var(--brand-primary)] px-3 py-1.5 text-xs font-bold text-white transition hover:bg-[var(--brand-primary-soft)]"
                             href={`/workers/${worker.id}/edit`}
                           >
                             Edit
@@ -559,15 +544,15 @@ export default async function WorkersPage({ searchParams }: WorkersPageProps) {
           <section className="grid gap-4 lg:hidden">
             {workers.map((worker) => (
               <article
-                className="app-surface rounded-lg p-5"
+                className="app-surface rounded-lg p-4"
                 key={worker.id}
               >
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0">
-                    <p className="text-xs font-bold uppercase tracking-wide text-[var(--brand-primary-soft)]">
+                    <p className="text-xs font-bold uppercase tracking-wide text-[var(--text-secondary)]">
                       {worker.employee_no}
                     </p>
-                    <h2 className="mt-1 break-words text-lg font-bold text-[var(--text-primary)]">
+                    <h2 className="mt-1 break-words text-base font-bold text-[var(--text-primary)]">
                       {worker.full_name}
                     </h2>
                   </div>
@@ -604,7 +589,7 @@ export default async function WorkersPage({ searchParams }: WorkersPageProps) {
                   </div>
                 </dl>
 
-                <div className="mt-5 grid grid-cols-2 gap-3">
+                <div className="mt-4 grid grid-cols-2 gap-3">
                   <Link
                     className="app-focus btn-secondary flex min-h-10 items-center justify-center rounded-md px-3 text-sm font-bold transition"
                     href={`/workers/${worker.id}`}
@@ -626,6 +611,4 @@ export default async function WorkersPage({ searchParams }: WorkersPageProps) {
     </div>
   );
 }
-
-
 

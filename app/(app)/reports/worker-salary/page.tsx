@@ -88,7 +88,7 @@ export default async function WorkerSalaryReportPage({
             </div>
 
             <section className="app-surface mt-2 rounded-lg p-3 sm:p-4">
-                <div className="flex flex-col gap-4">
+        <div className="flex flex-col gap-4 pt-4">
                     <form className="grid gap-3 sm:grid-cols-[1fr_auto]">
                         <label className="flex flex-col gap-1.5">
                             <span className="text-xs font-bold uppercase tracking-wide text-[var(--brand-primary)]">

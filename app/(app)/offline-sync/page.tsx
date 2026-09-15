@@ -128,7 +128,7 @@ export default function SyncCenterPage() {
 
     return (
         <>
-            <div className="mb-6 flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-center">
+            <div className="mb-6 flex flex-col items-start justify-between gap-4 pt-4 sm:flex-row sm:items-center">
                 <div>
                     <h1 className="text-2xl font-black tracking-tight text-[var(--brand-primary)]">
                         Offline Sync Center

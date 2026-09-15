@@ -91,7 +91,7 @@ export default async function WorkpointPayrollPage({ params, searchParams }: Wor
   const defaultRate = Number(data.workpoint.default_day_rate ?? 0) > 0 ? data.workpoint.default_day_rate : 0;
 
   return (
-    <div className="flex flex-col gap-5">
+    <div className="flex flex-col gap-5 pt-4">
       <OfflineCacheHydrator
         clients={[{ ...data.client, workpointCount: 1 }]}
         payrollWorkspace={{

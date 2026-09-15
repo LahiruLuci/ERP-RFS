@@ -211,7 +211,7 @@ export async function createTemporaryWorkerAction(
   formData: FormData,
 ): Promise<ClientActionState> {
   let workerId: string;
-  const nic = requiredText(formData, "nic");
+  const nic = nullableText(formData, "nic");
 
   try {
     workerId = await createTemporaryWorker({
@@ -220,7 +220,7 @@ export async function createTemporaryWorkerAction(
       full_name: requiredText(formData, "full_name"),
       nic,
       notes: nullableText(formData, "notes"),
-      phone: requiredText(formData, "phone"),
+      phone: nullableText(formData, "phone"),
     });
   } catch (error) {
     return { error: getClientErrorMessage(error) };
@@ -229,7 +229,7 @@ export async function createTemporaryWorkerAction(
   revalidatePath(`/clients/${clientId}/workpoints/${workpointId}`);
   redirect(
     `/clients/${clientId}/workpoints/${workpointId}?year=${year}&month=${month}&q=${encodeURIComponent(
-      nic,
+      nic ?? "",
     )}&selectedWorkerId=${workerId}`,
   );
 }

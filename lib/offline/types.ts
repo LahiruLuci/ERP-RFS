@@ -142,9 +142,9 @@ export type OfflineTemporaryWorkerPayload = {
   client_operation_id: string;
   default_shift_rate: number;
   full_name: string;
-  nic: string;
+  nic: string | null;
   notes: string | null;
-  phone: string;
+  phone: string | null;
   worker_id: string;
 };
 

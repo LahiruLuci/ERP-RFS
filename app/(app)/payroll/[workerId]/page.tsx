@@ -89,7 +89,7 @@ export default async function PayrollEntryPage({
   const cancelHref = `/payroll?year=${safeYear}&month=${safeMonth}`;
 
   return (
-    <div className="mx-auto flex max-w-5xl flex-col gap-5">
+    <div className="mx-auto flex max-w-5xl flex-col gap-5 pt-4">
       <section className="app-surface overflow-hidden rounded-lg">
         <div className="flex flex-col gap-4 border-l-4 border-[var(--brand-accent)] p-5 sm:p-6 lg:flex-row lg:items-center lg:justify-between">
           <div className="min-w-0">

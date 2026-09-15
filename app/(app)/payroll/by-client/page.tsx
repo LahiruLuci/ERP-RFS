@@ -44,7 +44,7 @@ export default async function PayrollByClientPage({ searchParams }: PayrollByCli
   }
 
   return (
-    <div className="flex flex-col gap-5">
+    <div className="flex flex-col gap-5 pt-4">
       <section className="app-surface overflow-hidden rounded-lg">
         <div className="flex flex-col gap-4 border-l-4 border-[var(--brand-accent)] p-4 sm:p-5 lg:flex-row lg:items-center lg:justify-between">
           <div>

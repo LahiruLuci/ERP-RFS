@@ -118,14 +118,6 @@ function validateTemporaryWorkerPayload(payload: OfflineTemporaryWorkerPayload) 
     throw new Error("Full Name is required.");
   }
 
-  if (!payload.nic.trim()) {
-    throw new Error("NIC is required.");
-  }
-
-  if (!payload.phone.trim()) {
-    throw new Error("Mobile number is required.");
-  }
-
   if (!Number.isFinite(payload.default_shift_rate) || payload.default_shift_rate < 0) {
     throw new Error("Default Shift Rate must be zero or more.");
   }
@@ -260,15 +252,17 @@ export async function queueOfflineTemporaryWorker(input: {
   userId: string;
 }) {
   const existingWorkers = await getOfflineRecords<CachedWorker>("workers");
-  const nic = input.nic.trim();
-  const phone = input.phone.trim();
-  const duplicate = existingWorkers.find(
-    (worker) =>
-      worker.nic?.trim().toLowerCase() === nic.toLowerCase() ||
-      (!!phone && worker.phone?.trim() === phone),
-  );
+  const nic = input.nic?.trim() || null;
+  const phone = input.phone?.trim() || null;
+  const duplicate = existingWorkers.find((worker) => {
+    if (nic && worker.nic?.trim().toLowerCase() === nic.toLowerCase()) {
+      return true;
+    }
 
-  if (duplicate?.nic?.trim().toLowerCase() === nic.toLowerCase()) {
+    return !!phone && worker.phone?.trim() === phone;
+  });
+
+  if (duplicate && nic && duplicate.nic?.trim().toLowerCase() === nic.toLowerCase()) {
     throw new Error("A worker with this NIC already exists.");
   }
 
@@ -711,11 +705,13 @@ async function syncTemporaryWorkerMutation(mutation: PendingMutation) {
   }
 
   if (error.code === "23505" || error.message?.includes("NIC already exists")) {
-    const { data: existingWorker } = await supabase
-      .from("workers")
-      .select("id, employee_no, full_name, nic, phone, joined_date, default_shift_rate, status, worker_type, updated_at")
-      .ilike("nic", payload.nic)
-      .maybeSingle();
+    const { data: existingWorker } = payload.nic
+      ? await supabase
+          .from("workers")
+          .select("id, employee_no, full_name, nic, phone, joined_date, default_shift_rate, status, worker_type, updated_at")
+          .ilike("nic", payload.nic)
+          .maybeSingle()
+      : { data: null };
 
     if (existingWorker?.id) {
       const workerId = String(existingWorker.id);

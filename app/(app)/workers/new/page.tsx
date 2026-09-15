@@ -3,7 +3,7 @@ import { WorkerForm } from "../worker-form";
 
 export default function NewWorkerPage() {
   return (
-    <div className="mx-auto flex max-w-4xl flex-col gap-6">
+    <div className="mx-auto flex max-w-4xl flex-col gap-6 pt-4">
       <section className="app-surface rounded-lg border-l-4 border-l-[var(--brand-accent)] p-5 sm:p-6">
         <p className="brand-kicker">
           Workers

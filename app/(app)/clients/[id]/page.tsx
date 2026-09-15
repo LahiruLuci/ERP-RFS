@@ -85,7 +85,7 @@ export default async function ClientDetailPage({
   const action = createWorkpointAction.bind(null, data.client.id);
 
   return (
-    <div className="flex flex-col gap-5">
+    <div className="flex flex-col gap-5 pt-4">
       <OfflineCacheHydrator
         clients={[{ ...data.client, workpointCount: data.workpoints.length }]}
         workpoints={data.workpoints}

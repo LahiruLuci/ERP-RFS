@@ -103,7 +103,7 @@ export default async function WorkerDetailsPage({
   }
 
   return (
-    <div className="mx-auto flex max-w-5xl flex-col gap-6">
+    <div className="mx-auto flex max-w-5xl flex-col gap-6 pt-4">
       <section className="app-surface flex flex-col gap-4 rounded-lg border-l-4 border-l-[var(--brand-accent)] p-5 sm:p-6 lg:flex-row lg:items-center lg:justify-between">
         <div className="min-w-0">
           <p className="brand-kicker">

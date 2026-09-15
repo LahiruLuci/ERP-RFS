@@ -369,8 +369,8 @@ export function WorkpointEntryForm({
                 </p>
               ) : null}
               <TextField label="Full Name" name="full_name" required />
-              <TextField label="NIC" name="nic" required />
-              <TextField label="Mobile Number" name="phone" required type="tel" />
+              <TextField label="NIC" name="nic" />
+              <TextField label="Mobile Number" name="phone" type="tel" />
               <label className="flex flex-col gap-1.5">
                 <span className="text-xs font-bold uppercase tracking-wide text-[var(--brand-primary)]">
                   Worker Type
