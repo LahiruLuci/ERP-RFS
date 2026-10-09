@@ -4,11 +4,6 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
 import {
-  calculateGrossSalary,
-  calculateNetSalary,
-  calculateTotalDeductions,
-} from "@/lib/payroll/calculations";
-import {
   approvePayrollRun,
   PayrollApprovedError,
   PayrollAuthenticationError,
@@ -143,22 +138,6 @@ export async function savePayrollRecordAction(
 
     if (overrides.otherDeduction && deductions.otherDeduction > 0 && !otherNote) {
       return { error: "Add a note explaining the other deduction." };
-    }
-
-    const grossSalary = calculateGrossSalary(
-      workEntries.map((entry) => ({
-        shiftRate: entry.shift_rate,
-        shifts: entry.shifts,
-      })),
-    );
-    const totalDeductions = calculateTotalDeductions(deductions);
-    const netSalary = calculateNetSalary(grossSalary, totalDeductions);
-
-    if (netSalary < 0) {
-      return {
-        error:
-          "Total deductions exceed this worker's gross salary. Please review the deductions before saving.",
-      };
     }
 
     await savePayrollRecord({

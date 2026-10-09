@@ -4,13 +4,16 @@ import { notFound } from "next/navigation";
 import { formatLkr } from "@/lib/format/currency";
 import {
   ClientConnectionError,
+  getCurrentUserRole,
   getWorkpointPayrollWorkspace,
 } from "@/lib/clients/data";
+import { createClient } from "@/lib/supabase/server";
 import { OfflineCacheHydrator } from "@/lib/offline/cache-hydrator";
 import { workerStatusLabels } from "@/lib/workers/types";
 
 import {
   createTemporaryWorkerAction,
+  deleteWorkpointPayrollEntryAction,
   saveWorkpointPayrollEntryAction,
 } from "../../../actions";
 import {
@@ -55,8 +58,10 @@ export default async function WorkpointPayrollPage({ params, searchParams }: Wor
   const search = resolvedSearchParams?.q?.trim() ?? "";
   const selectedWorkerId = resolvedSearchParams?.selectedWorkerId?.trim() ?? "";
   const action = saveWorkpointPayrollEntryAction.bind(null, id, workpointId, safeYear, safeMonth);
+  const deleteAction = deleteWorkpointPayrollEntryAction.bind(null, id, workpointId, safeYear, safeMonth);
   const temporaryWorkerAction = createTemporaryWorkerAction.bind(null, id, workpointId, safeYear, safeMonth);
   let data: Awaited<ReturnType<typeof getWorkpointPayrollWorkspace>> | null = null;
+  let currentRole = "";
 
   try {
     data = await getWorkpointPayrollWorkspace({
@@ -66,6 +71,9 @@ export default async function WorkpointPayrollPage({ params, searchParams }: Wor
       workpointId,
       year: safeYear,
     });
+
+    const supabase = await createClient();
+    currentRole = await getCurrentUserRole(supabase);
   } catch (error) {
     if (error instanceof ClientConnectionError) {
       return (
@@ -74,6 +82,7 @@ export default async function WorkpointPayrollPage({ params, searchParams }: Wor
           clientId={id}
           month={safeMonth}
           search={search}
+          selectedWorkerId={selectedWorkerId}
           temporaryWorkerAction={temporaryWorkerAction}
           workpointId={workpointId}
           year={safeYear}
@@ -161,6 +170,7 @@ export default async function WorkpointPayrollPage({ params, searchParams }: Wor
         clientId={id}
         defaultRate={defaultRate}
         month={safeMonth}
+        search={search}
         selectedWorkerId={selectedWorkerId}
         temporaryWorkerAction={temporaryWorkerAction}
         workers={data.eligibleWorkers}
@@ -184,7 +194,7 @@ export default async function WorkpointPayrollPage({ params, searchParams }: Wor
         <>
           <section className="app-surface hidden overflow-hidden rounded-lg lg:block">
             <div className="max-h-[calc(100dvh-18rem)] overflow-auto">
-              <table className="min-w-[58rem] divide-y divide-zinc-200 text-sm">
+              <table className="w-full divide-y divide-zinc-200 text-sm">
                 <thead className="table-head-brand sticky top-0 z-10 text-left text-xs font-bold uppercase tracking-wide">
                   <tr>
                     <th className="px-4 py-3">Worker ID</th>
@@ -207,7 +217,7 @@ export default async function WorkpointPayrollPage({ params, searchParams }: Wor
                       <td className="px-4 py-4 text-right tabular-nums">{entry.shifts}</td>
                       <td className="px-4 py-4 text-right tabular-nums">{formatLkr(entry.shift_rate)}</td>
                       <td className="px-4 py-4 text-right font-bold tabular-nums">{formatLkr(entry.line_gross)}</td>
-                      <td className="px-4 py-4 text-right"><InlineWorkpointEntryForm action={action} entryId={entry.entry_id} shiftRate={entry.shift_rate} shifts={entry.shifts} workerId={entry.worker_id} /></td>
+                       <td className="px-4 py-4 text-right"><InlineWorkpointEntryForm action={action} deleteAction={deleteAction} entryId={entry.entry_id} isOwner={currentRole === "owner"} shiftRate={entry.shift_rate} shifts={entry.shifts} workerId={entry.worker_id} /></td>
                     </tr>
                   ))}
                 </tbody>
@@ -234,7 +244,7 @@ export default async function WorkpointPayrollPage({ params, searchParams }: Wor
                   <div><dt className="text-[var(--text-secondary)]">Rate</dt><dd className="font-bold tabular-nums">{formatLkr(entry.shift_rate)}</dd></div>
                   <div className="col-span-2"><dt className="text-[var(--text-secondary)]">Workpoint Gross</dt><dd className="font-bold tabular-nums text-[var(--brand-primary)]">{formatLkr(entry.line_gross)}</dd></div>
                 </dl>
-                <div className="mt-4"><InlineWorkpointEntryForm action={action} entryId={entry.entry_id} shiftRate={entry.shift_rate} shifts={entry.shifts} workerId={entry.worker_id} /></div>
+                <div className="mt-4"><InlineWorkpointEntryForm action={action} deleteAction={deleteAction} entryId={entry.entry_id} isOwner={currentRole === "owner"} shiftRate={entry.shift_rate} shifts={entry.shifts} workerId={entry.worker_id} /></div>
               </article>
             ))}
           </section>

@@ -191,7 +191,7 @@ export default async function MonthlyPayrollReportPage({ searchParams }: Monthly
                             <p className="text-xs font-bold uppercase tracking-wide text-[var(--brand-primary)]">
                                 Total Net Salary
                             </p>
-                            <p className="mt-1 text-2xl font-black text-[var(--brand-primary)]">
+                            <p className={`mt-1 text-2xl font-black ${(totals.net ?? 0) < 0 ? "text-red-700" : "text-[var(--brand-primary)]"}`}>
                                 {formatLkr(totals.net)}
                             </p>
                         </div>
@@ -265,7 +265,7 @@ export default async function MonthlyPayrollReportPage({ searchParams }: Monthly
                                                     <td className="whitespace-nowrap px-4 py-4 text-right font-semibold tabular-nums text-[var(--text-secondary)]">
                                                         {formatLkr(record.totalDeductions)}
                                                     </td>
-                                                    <td className="whitespace-nowrap px-4 py-4 text-right font-bold tabular-nums text-[var(--brand-primary)]">
+                                                    <td className={`whitespace-nowrap px-4 py-4 text-right font-bold tabular-nums ${record.net < 0 ? "text-red-700" : "text-[var(--brand-primary)]"}`}>
                                                         {formatLkr(record.net)}
                                                     </td>
                                                     <td className="whitespace-nowrap px-4 py-4 text-right">
@@ -364,7 +364,7 @@ export default async function MonthlyPayrollReportPage({ searchParams }: Monthly
                                             </div>
                                             <div>
                                                 <dt className="text-[var(--text-secondary)]">Net</dt>
-                                                <dd className="font-bold tabular-nums text-[var(--brand-primary)]">
+                                                <dd className={`font-bold tabular-nums ${record.net < 0 ? "text-red-700" : "text-[var(--brand-primary)]"}`}>
                                                     {formatLkr(record.net)}
                                                 </dd>
                                             </div>

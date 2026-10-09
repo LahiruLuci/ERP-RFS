@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useEffect, useState, type FormEvent } from "react";
+import { useActionState, useEffect, useMemo, useState, type FormEvent } from "react";
 
 import type { PayrollWorker } from "@/lib/payroll/types";
 import { formatLkr } from "@/lib/format/currency";
@@ -154,6 +154,7 @@ export function WorkpointEntryForm({
   clientId,
   defaultRate,
   month,
+  search,
   selectedWorkerId,
   temporaryWorkerAction,
   workers,
@@ -164,6 +165,7 @@ export function WorkpointEntryForm({
   clientId: string;
   defaultRate: number | string;
   month: number;
+  search?: string;
   selectedWorkerId?: string;
   temporaryWorkerAction?: (state: ClientActionState, formData: FormData) => Promise<ClientActionState>;
   workers: PayrollWorker[];
@@ -176,7 +178,7 @@ export function WorkpointEntryForm({
   const { isOnline, userId } = useOnlineStatus();
   const [offlineMessage, setOfflineMessage] = useState<string | null>(null);
   const [temporaryWorkerMessage, setTemporaryWorkerMessage] = useState<string | null>(null);
-  const [selectedWorker, setSelectedWorker] = useState(selectedWorkerId ?? "");
+  const [userSelectedWorker, setUserSelectedWorker] = useState(selectedWorkerId ?? "");
   const [localWorkers, setLocalWorkers] = useState<CachedWorker[]>([]);
   const availableWorkers = [
     ...workers,
@@ -190,6 +192,20 @@ export function WorkpointEntryForm({
       worker_type: worker.worker_type,
     })),
   ];
+
+  const effectiveSelectedWorker = useMemo(() => {
+    if (selectedWorkerId) {
+      return selectedWorkerId;
+    }
+    if (workers.length === 1 && !userSelectedWorker) {
+      return workers[0].id;
+    }
+    return userSelectedWorker;
+  }, [selectedWorkerId, workers, userSelectedWorker]);
+
+  const showNoWorkerMessage = useMemo(() => {
+    return workers.length === 0 && !!search;
+  }, [workers, search]);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     if (isOnline) {
@@ -289,7 +305,7 @@ export function WorkpointEntryForm({
       });
 
       setLocalWorkers((currentWorkers) => [...currentWorkers, worker]);
-      setSelectedWorker(worker.id);
+      setUserSelectedWorker(worker.id);
       event.currentTarget.reset();
       setTemporaryWorkerMessage(
         "Temporary worker saved on this device. Waiting for internet connection.",
@@ -315,6 +331,16 @@ export function WorkpointEntryForm({
         </div>
         <form action={formAction} className="flex flex-col gap-3" onSubmit={handleSubmit}>
           <ErrorMessage message={state.error} />
+          {showNoWorkerMessage ? (
+            <p className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm font-semibold text-amber-800" role="status">
+              No eligible worker found for this search.
+            </p>
+          ) : null}
+          {state.success ? (
+            <p className="rounded-md border border-green-200 bg-green-50 px-3 py-2 text-sm font-semibold text-green-800" role="status">
+              Work entry added successfully.
+            </p>
+          ) : null}
           {offlineMessage ? (
             <p className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm font-semibold text-amber-800" role="status">
               {offlineMessage}
@@ -326,9 +352,9 @@ export function WorkpointEntryForm({
               <select
                 className="field-control min-h-10 rounded-md px-3 text-sm transition"
                 name="worker_id"
-                onChange={(event) => setSelectedWorker(event.target.value)}
+                onChange={(event) => setUserSelectedWorker(event.target.value)}
                 required
-                value={selectedWorker}
+                value={effectiveSelectedWorker}
               >
                 <option value="">Select worker</option>
                 {availableWorkers.map((worker) => (
@@ -531,20 +557,26 @@ export function PendingWorkpointEntries({
 
 export function InlineWorkpointEntryForm({
   action,
+  deleteAction,
   entryId,
+  isOwner,
   shiftRate,
   shifts,
   workerId,
 }: {
   action: (state: ClientActionState, formData: FormData) => Promise<ClientActionState>;
+  deleteAction?: (state: ClientActionState, formData: FormData) => Promise<ClientActionState>;
   entryId: string;
+  isOwner?: boolean;
   shiftRate: number | string;
   shifts: number | string;
   workerId: string;
 }) {
   const [state, formAction, isPending] = useActionState(action, initialState);
+  const [deleteState, deleteFormAction, isDeletePending] = useActionState(deleteAction ?? action, initialState);
   const { isOnline } = useOnlineStatus();
   const [offlineMessage, setOfflineMessage] = useState<string | null>(null);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     if (isOnline) {
@@ -555,23 +587,68 @@ export function InlineWorkpointEntryForm({
     setOfflineMessage("Editing existing work entries requires an internet connection.");
   }
 
+  function handleDeleteSubmit(event: FormEvent<HTMLFormElement>) {
+    if (isOnline) {
+      return;
+    }
+
+    event.preventDefault();
+    setOfflineMessage("Deleting existing work entries requires an internet connection.");
+  }
+
+  if (!isOwner) {
+    return (
+      <span className="text-xs font-semibold text-[var(--text-secondary)]">Owner only</span>
+    );
+  }
+
   return (
-    <form action={formAction} className="flex flex-col gap-2" onSubmit={handleSubmit}>
-      <input name="entry_id" type="hidden" value={entryId} />
-      <input name="worker_id" type="hidden" value={workerId} />
-      <div className="flex flex-col gap-2 sm:flex-row lg:justify-end">
-        <input aria-label="Shifts" className="field-control min-h-10 w-full rounded-md px-3 text-sm transition sm:w-24" defaultValue={String(shifts)} min="0" name="shifts" required step="0.01" type="number" />
-        <input aria-label="Shift rate" className="field-control min-h-10 w-full rounded-md px-3 text-sm transition sm:w-28" defaultValue={String(shiftRate)} min="0" name="shift_rate" required step="0.01" type="number" />
-        <button className="app-focus btn-secondary min-h-10 rounded-md px-3 text-sm font-bold transition disabled:cursor-wait disabled:opacity-70" disabled={isPending} type="submit">
-          {isPending ? "Saving..." : "Update"}
-        </button>
+    <div className="flex flex-col gap-2">
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-end">
+        <form action={formAction} className="flex flex-col gap-2" onSubmit={handleSubmit}>
+          <input name="entry_id" type="hidden" value={entryId} />
+          <input name="worker_id" type="hidden" value={workerId} />
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-end">
+            <input aria-label="Shifts" className="field-control min-h-10 w-full rounded-md px-3 text-sm transition sm:w-24" defaultValue={String(shifts)} min="0" name="shifts" required step="0.01" type="number" />
+            <input aria-label="Shift rate" className="field-control min-h-10 w-full rounded-md px-3 text-sm transition sm:w-28" defaultValue={String(shiftRate)} min="0" name="shift_rate" required step="0.01" type="number" />
+            <button className="app-focus btn-secondary min-h-10 w-full rounded-md px-3 text-sm font-bold transition disabled:cursor-wait disabled:opacity-70 sm:w-auto" disabled={isPending} type="submit">
+              {isPending ? "Saving..." : "Update"}
+            </button>
+          </div>
+        </form>
+        {deleteAction ? (
+          <div className="flex items-center justify-end gap-2">
+            {!showDeleteConfirm ? (
+              <button className="app-focus min-h-10 rounded-md border border-red-200 bg-red-50 px-3 text-sm font-bold text-red-700 transition hover:bg-red-100 disabled:cursor-wait disabled:opacity-70" disabled={isDeletePending} onClick={() => setShowDeleteConfirm(true)} type="button">
+                Delete
+              </button>
+            ) : (
+              <form action={deleteFormAction} className="flex items-center gap-2" onSubmit={handleDeleteSubmit}>
+                <input name="entry_id" type="hidden" value={entryId} />
+                <span className="text-xs font-semibold text-red-700">Delete this entry?</span>
+                <button className="app-focus min-h-10 rounded-md border border-red-200 bg-red-50 px-3 text-sm font-bold text-red-700 transition hover:bg-red-100 disabled:cursor-wait disabled:opacity-70" disabled={isDeletePending} type="submit">
+                  {isDeletePending ? "Deleting..." : "Confirm"}
+                </button>
+                <button className="app-focus min-h-10 rounded-md border border-[var(--border)] bg-white px-3 text-sm font-bold transition hover:bg-[var(--surface-muted)] disabled:cursor-wait disabled:opacity-70" disabled={isDeletePending} onClick={() => setShowDeleteConfirm(false)} type="button">
+                  Cancel
+                </button>
+              </form>
+            )}
+          </div>
+        ) : null}
       </div>
+      {state.success ? (
+        <p className="rounded-md border border-green-200 bg-green-50 px-3 py-2 text-sm font-semibold text-green-800" role="status">
+          Work entry updated successfully.
+        </p>
+      ) : null}
       <ErrorMessage message={state.error} />
+      <ErrorMessage message={deleteState.error} />
       {offlineMessage ? (
         <p className="text-xs font-semibold text-amber-700" role="alert">
           {offlineMessage}
         </p>
       ) : null}
-    </form>
+    </div>
   );
 }

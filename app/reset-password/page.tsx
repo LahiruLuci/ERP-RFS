@@ -1,48 +1,26 @@
 import Image from "next/image";
-import { redirect } from "next/navigation";
 import { connection } from "next/server";
+import { redirect } from "next/navigation";
 
 import { isSupabaseConfigured } from "@/lib/supabase/config";
 import { createClient } from "@/lib/supabase/server";
 
-import { LoginForm } from "./login-form";
+import { ResetPasswordForm } from "./reset-password-form";
 
-type LoginPageProps = {
-  searchParams?: Promise<{ message?: string; error?: string }>;
-};
-
-function getPasswordUpdatedMessage(message?: string) {
-  if (message === "password_updated") {
-    return "Password updated successfully. Please sign in with your new password.";
-  }
-
-  return undefined;
-}
-
-function getForgotPasswordError(error?: string) {
-  if (error === "invalid_link" || error === "access_denied" || error === "otp_expired") {
-    return "This password reset link is invalid or has expired. Please request a new one.";
-  }
-
-  return undefined;
-}
-
-export default async function LoginPage({ searchParams }: LoginPageProps) {
+export default async function ResetPasswordPage() {
   await connection();
-
-  const resolvedSearchParams = searchParams ? await searchParams : undefined;
-  const initialMessage = getPasswordUpdatedMessage(resolvedSearchParams?.message);
-  const initialError = getForgotPasswordError(resolvedSearchParams?.error);
 
   const isConfigured = isSupabaseConfigured();
 
-  if (isConfigured) {
-    const supabase = await createClient();
-    const { data } = await supabase.auth.getClaims();
+  if (!isConfigured) {
+    redirect("/forgot-password?error=auth_not_configured");
+  }
 
-    if (data?.claims) {
-      redirect("/dashboard");
-    }
+  const supabase = await createClient();
+  const { data } = await supabase.auth.getClaims();
+
+  if (!data?.claims) {
+    redirect("/forgot-password?error=invalid_link");
   }
 
   return (
@@ -71,39 +49,33 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
             Internal Management System
           </p>
           <h1 className="text-3xl font-bold tracking-tight text-[var(--text-primary)] sm:text-4xl lg:text-5xl">
-            Access your business operations workspace
+            Set a new password
           </h1>
           <p className="mt-5 max-w-xl text-base leading-7 text-[var(--text-secondary)] sm:text-lg">
-            Access is limited to authorized company users. Sign in with your
-            account or create one if this is your first time here.
+            Create a strong password you can remember. We recommend using a
+            combination of letters, numbers, and symbols.
           </p>
         </section>
 
         <section
-          aria-labelledby="login-heading"
+          aria-labelledby="reset-password-heading"
           className="app-surface w-full rounded-lg p-6 sm:p-8"
         >
           <div className="mb-8">
             <h2
               className="text-2xl font-bold tracking-tight text-[var(--text-primary)]"
-              id="login-heading"
+              id="reset-password-heading"
             >
-              Welcome back
+              Update password
             </h2>
             <p className="mt-2 text-sm leading-6 text-[var(--text-secondary)]">
-              Sign in or create an account to open the dashboard.
+              Enter a new password for your account.
             </p>
           </div>
 
-          <LoginForm
-            isConfigured={isConfigured}
-            initialError={initialError}
-            initialMessage={initialMessage}
-          />
+          <ResetPasswordForm />
         </section>
       </div>
     </main>
   );
 }
-
-

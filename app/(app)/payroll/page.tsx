@@ -313,10 +313,7 @@ export default async function PayrollPage({ searchParams }: PayrollPageProps) {
                       otherDeduction: effectiveDeductions.other,
                       uniform: effectiveDeductions.uniform,
                     });
-                    const netSalary =
-                      record && grossSalary >= totalDeductions
-                        ? calculateNetSalary(grossSalary, totalDeductions)
-                        : record?.net_salary ?? 0;
+                    const netSalary = calculateNetSalary(grossSalary, totalDeductions);
 
                     return (
                       <tr className="table-row-brand" key={worker.id}>
@@ -363,7 +360,7 @@ export default async function PayrollPage({ searchParams }: PayrollPageProps) {
                         <td className="whitespace-nowrap px-4 py-4 text-right tabular-nums">
                           {formatLkr(effectiveDeductions.other)}
                         </td>
-                        <td className="whitespace-nowrap px-4 py-4 text-right font-bold tabular-nums text-[var(--brand-primary)]">
+                        <td className={`whitespace-nowrap px-4 py-4 text-right font-bold tabular-nums ${Number(netSalary) < 0 ? "text-red-700" : "text-[var(--brand-primary)]"}`}>
                           {formatLkr(netSalary)}
                         </td>
                         <td className="whitespace-nowrap px-4 py-4 text-right">
@@ -398,10 +395,7 @@ export default async function PayrollPage({ searchParams }: PayrollPageProps) {
                 otherDeduction: effectiveDeductions.other,
                 uniform: effectiveDeductions.uniform,
               });
-              const netSalary =
-                record && grossSalary >= totalDeductions
-                  ? calculateNetSalary(grossSalary, totalDeductions)
-                  : record?.net_salary ?? 0;
+              const netSalary = calculateNetSalary(grossSalary, totalDeductions);
 
               return (
                 <article className="app-surface rounded-lg p-5" key={worker.id}>
@@ -438,7 +432,7 @@ export default async function PayrollPage({ searchParams }: PayrollPageProps) {
                     </div>
                     <div>
                       <dt className="text-[var(--text-secondary)]">Net</dt>
-                      <dd className="font-bold tabular-nums text-[var(--brand-primary)]">
+                      <dd className={`font-bold tabular-nums ${Number(netSalary) < 0 ? "text-red-700" : "text-[var(--brand-primary)]"}`}>
                         {formatLkr(netSalary)}
                       </dd>
                     </div>

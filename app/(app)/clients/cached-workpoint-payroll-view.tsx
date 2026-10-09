@@ -33,6 +33,7 @@ type CachedWorkpointPayrollViewProps = {
   clientId: string;
   month: number;
   search: string;
+  selectedWorkerId?: string;
   workpointId: string;
   year: number;
 };
@@ -55,6 +56,7 @@ export function CachedWorkpointPayrollView({
   clientId,
   month,
   search,
+  selectedWorkerId,
   workpointId,
   year,
 }: CachedWorkpointPayrollViewProps) {
@@ -218,6 +220,8 @@ export function CachedWorkpointPayrollView({
         clientId={clientId}
         defaultRate={workspace.workpoint_default_day_rate}
         month={month}
+        search={search}
+        selectedWorkerId={selectedWorkerId}
         temporaryWorkerAction={temporaryWorkerAction}
         workers={workerOptions}
         workpointId={workpointId}

@@ -98,7 +98,7 @@ export function PayrollOverview({ payroll, month, year }: PayrollOverviewProps) 
             <div className="sm:col-span-2 flex items-center justify-between rounded-md border border-[var(--border)] bg-white px-4 py-3">
               <div>
                 <dt className="text-xs font-bold uppercase tracking-wide text-[var(--text-secondary)]">Net Salary</dt>
-                <dd className="mt-0.5 text-xl font-black text-[var(--brand-primary)] sm:text-2xl">{formatLkr(payroll.netSalary)}</dd>
+                <dd className={`mt-0.5 text-xl font-black tabular-nums sm:text-2xl ${(payroll.netSalary ?? 0) < 0 ? "text-red-700" : "text-[var(--brand-primary)]"}`}>{formatLkr(payroll.netSalary)}</dd>
               </div>
               {payroll.status === "draft" && (
                 <span className="text-xs font-semibold text-[var(--text-secondary)]">Awaiting final approval</span>

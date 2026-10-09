@@ -295,7 +295,7 @@ export function WorkerPayslip({
             <p className="text-xs font-black uppercase tracking-[0.18em] text-[var(--brand-primary)]">
               Net Salary
             </p>
-            <p className="text-2xl font-black tabular-nums text-[var(--brand-primary)] print:text-xl">
+            <p className={`text-2xl font-black tabular-nums print:text-xl ${record.netSalary < 0 ? "text-red-700" : "text-[var(--brand-primary)]"}`}>
               {formatLkr(record.netSalary)}
             </p>
           </div>

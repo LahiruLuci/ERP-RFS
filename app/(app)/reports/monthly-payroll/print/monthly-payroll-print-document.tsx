@@ -107,7 +107,7 @@ export function MonthlyPayrollPrintDocument({
                     </div>
                     <div>
                         <p className="text-xs font-bold uppercase text-slate-500">Total Net Salary</p>
-                        <p className="text-lg font-black text-[var(--brand-primary)]">{formatLkr(data.totals.net)}</p>
+                        <p className={`text-lg font-black ${(data.totals.net ?? 0) < 0 ? "text-red-700" : "text-[var(--brand-primary)]"}`}>{formatLkr(data.totals.net)}</p>
                     </div>
                     <div>
                         <p className="text-xs font-bold uppercase text-slate-500">Status</p>
@@ -162,7 +162,7 @@ export function MonthlyPayrollPrintDocument({
                                         <td className="px-2.5 py-2 text-right tabular-nums">{formatLkr(record.uniform)}</td>
                                         <td className="px-2.5 py-2 text-right tabular-nums">{formatLkr(record.otherDeduction)}</td>
                                         <td className="px-2.5 py-2 text-right font-semibold tabular-nums">{formatLkr(record.totalDeductions)}</td>
-                                        <td className="px-2.5 py-2 text-right font-bold tabular-nums text-[var(--brand-primary)]">{formatLkr(record.net)}</td>
+                                        <td className={`px-2.5 py-2 text-right font-bold tabular-nums ${record.net < 0 ? "text-red-700" : "text-[var(--brand-primary)]"}`}>{formatLkr(record.net)}</td>
                                     </tr>
                                 ))
                             )}
@@ -181,7 +181,7 @@ export function MonthlyPayrollPrintDocument({
                                     <td className="px-2.5 py-2 text-right tabular-nums">{formatLkr(data.totals.uniform)}</td>
                                     <td className="px-2.5 py-2 text-right tabular-nums">{formatLkr(data.totals.otherDeduction)}</td>
                                     <td className="px-2.5 py-2 text-right tabular-nums">{formatLkr(data.totals.deductions)}</td>
-                                    <td className="px-2.5 py-2 text-right tabular-nums">{formatLkr(data.totals.net)}</td>
+                                    <td className={`px-2.5 py-2 text-right tabular-nums ${(data.totals.net ?? 0) < 0 ? "text-red-700 font-bold" : ""}`}>{formatLkr(data.totals.net)}</td>
                                 </tr>
                             </tfoot>
                         ) : null}

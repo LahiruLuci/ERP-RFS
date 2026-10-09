@@ -10,6 +10,7 @@ import {
   ClientValidationError,
   createClientRecord,
   createWorkpoint,
+  deleteWorkpointPayrollEntry,
   saveWorkpointPayrollEntry,
 } from "@/lib/clients/data";
 import type { ClientStatus } from "@/lib/clients/types";
@@ -32,6 +33,7 @@ import {
 
 export type ClientActionState = {
   error?: string;
+  success?: boolean;
 };
 
 const initialPath = "/clients";
@@ -111,7 +113,7 @@ function getClientErrorMessage(error: unknown) {
   }
 
   if (error instanceof WorkerConstraintError) {
-    return "Please enter full name, NIC, mobile number, and valid salary values.";
+    return "Please enter the worker's full name.";
   }
 
   return "Unable to save right now. Please try again.";
@@ -199,7 +201,7 @@ export async function saveWorkpointPayrollEntryAction(
   revalidatePath(`/clients/${clientId}/workpoints/${workpointId}`);
   revalidatePath("/payroll");
   revalidatePath(`/payroll/${workerId}`);
-  return {};
+  return { success: true };
 }
 
 export async function createTemporaryWorkerAction(
@@ -232,4 +234,34 @@ export async function createTemporaryWorkerAction(
       nic ?? "",
     )}&selectedWorkerId=${workerId}`,
   );
+}
+
+export async function deleteWorkpointPayrollEntryAction(
+  clientId: string,
+  workpointId: string,
+  year: number,
+  month: number,
+  _previousState: ClientActionState,
+  formData: FormData,
+): Promise<ClientActionState> {
+  const entryId = String(formData.get("entry_id") ?? "").trim();
+
+  if (!entryId) {
+    return { error: "Work entry is required." };
+  }
+
+  try {
+    await deleteWorkpointPayrollEntry({
+      entryId,
+      month,
+      workplaceId: workpointId,
+      year,
+    });
+  } catch (error) {
+    return { error: getClientErrorMessage(error) };
+  }
+
+  revalidatePath(`/clients/${clientId}/workpoints/${workpointId}`);
+  revalidatePath("/payroll");
+  return {};
 }

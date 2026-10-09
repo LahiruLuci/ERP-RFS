@@ -544,16 +544,16 @@ export function PayrollEntryForm({
             <p className="text-sm font-medium text-[var(--text-secondary)]">
               Net Salary
             </p>
-            <p className="mt-1 text-2xl font-black tabular-nums text-[var(--brand-primary)]">
-              {formatLkr(totals.netSalary)}
-            </p>
+          <p className={`mt-1 text-2xl font-black tabular-nums ${totals.netSalary < 0 ? "text-red-700" : "text-[var(--brand-primary)]"}`}>
+            {formatLkr(totals.netSalary)}
+          </p>
           </div>
         </div>
 
         {hasNegativeNet ? (
           <p className="mt-4 rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm font-semibold text-red-700">
-            Total deductions exceed this worker&apos;s gross salary. Please
-            review the deductions before saving.
+            Net salary is negative. Approval is allowed, but please review the
+            deductions before saving.
           </p>
         ) : null}
       </section>
@@ -568,7 +568,7 @@ export function PayrollEntryForm({
         {!isApproved ? (
           <button
             className="app-focus btn-primary flex min-h-11 items-center justify-center rounded-md px-4 text-sm font-bold transition disabled:cursor-not-allowed disabled:bg-slate-400"
-            disabled={isPending || hasNegativeNet}
+            disabled={isPending}
             type="submit"
           >
             {isPending ? "Saving..." : "Save Salary"}

@@ -9,13 +9,19 @@ type AuthMode = "login" | "signup";
 
 type LoginFormProps = {
   isConfigured: boolean;
+  initialMessage?: string;
+  initialError?: string;
 };
 
-export function LoginForm({ isConfigured }: LoginFormProps) {
+export function LoginForm({
+  isConfigured,
+  initialMessage,
+  initialError,
+}: LoginFormProps) {
   const [mode, setMode] = useState<AuthMode>("login");
   const [loginState, loginAction, isLoginPending] = useActionState(
     login,
-    initialState,
+    { ...initialState, message: initialMessage, error: initialError },
   );
   const [signUpState, signUpAction, isSignUpPending] = useActionState(
     signUp,
@@ -95,7 +101,16 @@ export function LoginForm({ isConfigured }: LoginFormProps) {
             <p className="text-xs leading-5 text-[var(--text-secondary)]">
               Use at least 6 characters.
             </p>
-          ) : null}
+          ) : (
+            <p className="text-xs leading-5">
+              <a
+                className="app-focus font-semibold text-[var(--brand-primary)] underline"
+                href="/forgot-password"
+              >
+                Forgot password?
+              </a>
+            </p>
+          )}
         </div>
 
         {!isConfigured ? (

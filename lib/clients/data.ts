@@ -242,6 +242,33 @@ async function assertClientViewAccess(supabase: SupabaseServerClient) {
   return getCurrentAccess(supabase, ["owner", "admin", "accounts"]);
 }
 
+async function assertOwnerAccess(supabase: SupabaseServerClient) {
+  return getCurrentAccess(supabase, ["owner"]);
+}
+
+export async function getCurrentUserRole(supabase: SupabaseServerClient): Promise<string> {
+  const {
+    data: { user },
+    error: userError,
+  } = await supabase.auth.getUser();
+
+  if (userError || !user) {
+    return "";
+  }
+
+  const { data: profile, error: profileError } = await supabase
+    .from("profiles")
+    .select("role")
+    .eq("id", user.id)
+    .maybeSingle();
+
+  if (profileError || !profile) {
+    return "";
+  }
+
+  return String(profile.role ?? "");
+}
+
 async function assertClientManageAccess(supabase: SupabaseServerClient) {
   return getCurrentAccess(supabase, ["owner", "admin"]);
 }
@@ -894,6 +921,10 @@ export async function saveWorkpointPayrollEntry(input: WorkpointPayrollSaveInput
     throw new PayrollValidationError("Shift rate must be zero or more.");
   }
 
+  if (input.entry_id) {
+    await assertOwnerAccess(supabase);
+  }
+
   const { data, error } = await supabase.rpc("save_workpoint_payroll_entry", {
     p_client_operation_id: input.client_operation_id ?? null,
     p_entry_id: input.entry_id,
@@ -910,4 +941,25 @@ export async function saveWorkpointPayrollEntry(input: WorkpointPayrollSaveInput
   }
 
   return data as string;
+}
+
+export async function deleteWorkpointPayrollEntry(input: {
+  entryId: string;
+  month: number;
+  workplaceId: string;
+  year: number;
+}) {
+  const supabase = await createClient();
+  await assertOwnerAccess(supabase);
+
+  const { error } = await supabase.rpc("delete_workpoint_payroll_entry", {
+    p_entry_id: input.entryId,
+    p_month: input.month,
+    p_workplace_id: input.workplaceId,
+    p_year: input.year,
+  });
+
+  if (error) {
+    handleClientError("delete_workpoint_payroll_entry", error);
+  }
 }
